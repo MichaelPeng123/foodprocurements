@@ -19,12 +19,14 @@ function Navbar() {
     <nav className="navbar">
       <div className="nav-links">
         <Link to="/home" className="nav-link">Home</Link>
+        <Link to="/pdfupload" className="nav-link">PDF Upload</Link>
         {auth.currentUser ? (
           <button onClick={handleSignOut} className="nav-link">Sign Out</button>
         ) : (
           <Link to="/signin" className="nav-link">Sign In</Link>
         )}
       </div>
+
     </nav>
   );
 }

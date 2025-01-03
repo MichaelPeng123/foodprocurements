@@ -1,19 +1,21 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBeTJ2S-IjIdsbetUb446kZkJ5c9lh20iw",
-    authDomain: "foodprocurements.firebaseapp.com",
-    projectId: "foodprocurements",
-    storageBucket: "foodprocurements.firebasestorage.app",
-    messagingSenderId: "805493426093",
-    appId: "1:805493426093:web:08d1afdd8618a3759ac324",
-    measurementId: "G-CMP5NQJXH6"
+    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.REACT_APP_FIREBASE_APP_ID,
+    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-export { db, analytics };
+export { db, analytics, storage };
