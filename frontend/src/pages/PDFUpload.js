@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { storage } from '../firebase';  // You'll need to create this
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function PdfUpload() {
   const [file, setFile] = useState(null);
@@ -23,29 +23,37 @@ export default function PdfUpload() {
     try {
       setUploadStatus('Uploading...');
       
-      // Create storage reference
+
+      const storage = getStorage();
+
       const storageRef = ref(storage, `pdfs/${file.name}`);
       
       // Upload file
-      const snapshot = await uploadBytes(storageRef, file);
+      const uploadSnapshot = await uploadBytes(storageRef, file);
+
+      console.log('Uploaded a blob or file!', uploadSnapshot);
       
       // Get download URL
-      const url = await getDownloadURL(snapshot.ref);
+      const url = await getDownloadURL(uploadSnapshot.ref);
+         console.log("URL: ", url);
       
+      const response = await fetch('http://localhost:5005/process-pdf', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 'pdf_url': url }),
+          });
+       console.log("Response: ", response);
+
       setUploadStatus('Upload successful!');
-      console.log('Download URL:', url);
+    //   console.log('Download URL:', url);
 
       // Here you would typically send the URL to your backend
-      const response = await fetch('http://localhost:5000/process-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pdfUrl: url }),
-      });
+      
 
-      const data = await response.json();
-      console.log('Processed data:', data);
+    //   const data = await response.json();
+    //   console.log('Processed data:', data);
 
     } catch (error) {
       console.error('Error:', error);
