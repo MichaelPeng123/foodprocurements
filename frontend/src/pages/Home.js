@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { db } from '../firebase';
+import { db } from '../misc/firebase';
 import { collection, addDoc } from "firebase/firestore";
+import { Link } from 'react-router-dom';
 
 function Home() {
   const [message, setMessage] = useState('');
@@ -35,31 +36,42 @@ function Home() {
   };
 
   return (
-    <div className="page-container">
-      <header className="page-header">
-        <h1>React + Flask API Test</h1>
-        
-        <div className="button-container">
-          <button onClick={fetchTestData} className="action-button">
-            Test GET Request
-          </button>
-          <button onClick={sendData} className="action-button">
-            Test POST Request
-          </button>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="font-sans text-3xl font-medium tracking-tight text-gray-800 mb-8">Welcome to MealMetrics</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="bg-white p-8 rounded-lg shadow-sm">
+          <h2 className="font-sans text-xl font-medium text-gray-700 mb-6">Quick Actions</h2>
+          <div className="space-y-4">
+            <Link to="/pdfupload" className="block w-full bg-blue-500 text-white text-center py-3 px-4 rounded font-medium hover:bg-blue-600 transition-colors">
+              Upload New Document
+            </Link>
+            <Link to="/database" className="block w-full bg-gray-500 text-white text-center py-3 px-4 rounded font-medium hover:bg-gray-600 transition-colors">
+              View Food Database
+            </Link>
+          </div>
         </div>
-
-        {error && (
-          <div className="error-message">
-            {error}
+        <div className="bg-white p-8 rounded-lg shadow-sm">
+          <h2 className="font-sans text-xl font-medium text-gray-700 mb-6">System Status</h2>
+          <div className="space-y-4">
+            <button onClick={fetchTestData} className="w-full bg-blue-500 text-white py-3 px-4 rounded font-medium hover:bg-blue-600 transition-colors">
+              Test API Connection
+            </button>
+            <button onClick={sendData} className="w-full bg-gray-500 text-white py-3 px-4 rounded font-medium hover:bg-gray-600 transition-colors">
+              Test Database Connection
+            </button>
           </div>
-        )}
-
-        {message && (
-          <div className="response-message">
-            Response from API: {message}
-          </div>
-        )}
-      </header>
+          {error && (
+            <div className="mt-6 p-4 bg-red-50 text-red-600 rounded font-medium">
+              {error}
+            </div>
+          )}
+          {message && (
+            <div className="mt-6 p-4 bg-blue-50 text-blue-600 rounded font-medium">
+              {message}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

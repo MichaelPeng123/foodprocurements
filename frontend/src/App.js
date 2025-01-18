@@ -1,22 +1,22 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import SignUp from './pages/SignUp';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Navbar from './pages/Navbar';
 import Home from './pages/Home';
+import PdfUpload from './pages/PDFUpload';
 import SignIn from './pages/SignIn';
-import Navbar from './components/Navbar';
-import PDFUpload from './pages/PDFUpload';
-import './App.css';
+import Database from './pages/Database';
 
 function App() {
   return (
     <Router>
-      <div className="App">
+      <div className="min-h-screen bg-gray-100">
         <Navbar />
         <Routes>
+          <Route path="/" element={<Home />} />
           <Route path="/home" element={<Home />} />
+          <Route path="/pdfupload" element={<PdfUpload />} />
           <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/pdfupload" element={<PDFUpload />} />
-          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/database" element={<Database />} />
         </Routes>
       </div>
     </Router>

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { storage } from '../firebase';  // You'll need to create this
+import { storage } from '../misc/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function PdfUpload() {
   const [file, setFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleChange = (e) => {
     if (e.target.files[0]) {
@@ -22,89 +23,79 @@ export default function PdfUpload() {
 
     try {
       setUploadStatus('Uploading...');
-      
 
       const storage = getStorage();
-
       const storageRef = ref(storage, `pdfs/${file.name}`);
       
-      // Upload file
       const uploadSnapshot = await uploadBytes(storageRef, file);
-
       console.log('Uploaded a blob or file!', uploadSnapshot);
       
-      // Get download URL
       const url = await getDownloadURL(uploadSnapshot.ref);
-         console.log("URL: ", url);
+      console.log("URL: ", url);
       
       const response = await fetch('http://localhost:5005/process-pdf', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 'pdf_url': url }),
-          });
-       console.log("Response: ", response);
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 'pdf_url': url }),
+      });
+      console.log("Response: ", response);
 
       setUploadStatus('Upload successful!');
-    //   console.log('Download URL:', url);
-
-      // Here you would typically send the URL to your backend
-      
-
-    //   const data = await response.json();
-    //   console.log('Processed data:', data);
-
     } catch (error) {
       console.error('Error:', error);
       setUploadStatus('Upload failed: ' + error.message);
     }
   };
 
-  const styles = {
-    container: {
-      maxWidth: '500px',
-      margin: '0 auto',
-      padding: '20px',
-    },
-    form: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '20px',
-    },
-    input: {
-      padding: '10px',
-      border: '1px solid #ccc',
-      borderRadius: '4px',
-    },
-    button: {
-      padding: '10px 20px',
-      backgroundColor: '#007bff',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer',
-    },
-    status: {
-      marginTop: '20px',
-      color: '#666',
-    }
-  };
-
   return (
-    <div style={styles.container}>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          type="file"
-          accept=".pdf"
-          onChange={handleChange}
-          style={styles.input}
-        />
-        <button type="submit" style={styles.button}>
-          Upload PDF
-        </button>
-      </form>
-      {uploadStatus && <p style={styles.status}>{uploadStatus}</p>}
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="font-sans text-2xl font-medium text-gray-800 mb-8 tracking-tight">Upload PDF Document</h1>
+      <div className="bg-white p-8 rounded-lg shadow-sm max-w-2xl mx-auto">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div 
+            className={`border-2 border-dashed rounded-lg p-8 text-center
+              ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
+              ${file ? 'bg-green-50 border-green-500' : ''}`}
+          >
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleChange}
+              className="hidden"
+              id="pdf-upload"
+            />
+            <label
+              htmlFor="pdf-upload"
+              className="font-sans text-gray-600 cursor-pointer hover:text-blue-600 transition-colors"
+            >
+              {file ? file.name : 'Drop your PDF here or click to upload'}
+            </label>
+          </div>
+          <button
+            type="submit"
+            disabled={!file}
+            className={`w-full py-3 px-4 rounded font-medium transition-colors
+              ${file 
+                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+          >
+            Process Document
+          </button>
+        </form>
+        {uploadStatus && (
+          <div className={`mt-6 p-4 rounded font-medium
+            ${uploadStatus.includes('successful') 
+              ? 'bg-green-50 text-green-600' 
+              : uploadStatus === 'Uploading...'
+                ? 'bg-blue-50 text-blue-600'
+                : 'bg-red-50 text-red-600'}`}
+          >
+            {uploadStatus}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
