@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 function Home() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState(null);
+  const [analyzeResponse, setAnalyzeResponse] = useState(null);
 
   const fetchTestData = async () => {
     try {
@@ -35,6 +36,24 @@ function Home() {
     }
   };
 
+  const testAnalyzeEndpoint = async () => {
+    try {
+      const response = await fetch('http://localhost:5005/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      console.log("Analyze Response: ", data);
+      setAnalyzeResponse(JSON.stringify(data, null, 2));
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch data from analyze endpoint');
+      console.error('Error:', err);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="font-sans text-3xl font-medium tracking-tight text-gray-800 mb-8">Welcome to MealMetrics</h1>
@@ -59,6 +78,9 @@ function Home() {
             <button onClick={sendData} className="w-full bg-gray-500 text-white py-3 px-4 rounded font-medium hover:bg-gray-600 transition-colors">
               Test Database Connection
             </button>
+            <button onClick={testAnalyzeEndpoint} className="w-full bg-green-500 text-white py-3 px-4 rounded font-medium hover:bg-green-600 transition-colors">
+              Test Analyze Endpoint
+            </button>
           </div>
           {error && (
             <div className="mt-6 p-4 bg-red-50 text-red-600 rounded font-medium">
@@ -68,6 +90,11 @@ function Home() {
           {message && (
             <div className="mt-6 p-4 bg-blue-50 text-blue-600 rounded font-medium">
               {message}
+            </div>
+          )}
+          {analyzeResponse && (
+            <div className="mt-6 p-4 bg-green-50 text-green-600 rounded font-medium overflow-auto">
+              <pre>{analyzeResponse}</pre>
             </div>
           )}
         </div>
