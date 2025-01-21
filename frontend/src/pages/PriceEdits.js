@@ -14,14 +14,16 @@ function PriceEdits() {
     const FetchCsvData = async () => {
         try {
             const csvUrl = location.state?.csvUrl;
+            const csvFileName = location.state?.csvFileName;
             console.log("CSV URL: ", csvUrl);
+            console.log("CSV File Name: ", csvFileName);
             
             if (!csvUrl) {
                 console.error("No CSV URL provided");
                 return;
             }
 
-            const response = await fetch(`http://localhost:5005/get-csv?csvUrl=${encodeURIComponent(csvUrl)}`);
+            const response = await fetch(`http://localhost:5005/get-csv?csvUrl=${encodeURIComponent(csvUrl)}&csvFileName=${encodeURIComponent(csvFileName)}`);
             const data = await response.json();
             if (data.status === 'success') {
                 const rows = data.data;
@@ -41,13 +43,15 @@ function PriceEdits() {
 
     const saveChanges = async () => {
         try {
+            const csvFileName = location.state?.csvFileName;
             const response = await fetch('http://localhost:5005/save-csv', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    data: [headers, ...csvData]
+                    data: [headers, ...csvData],
+                    csvFileName: csvFileName
                 }),
             });
             const result = await response.json();

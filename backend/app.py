@@ -12,10 +12,13 @@ import csv
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+from firebase_admin import storage
 
 # Initialize Firebase with your service account credentials
 cred = credentials.Certificate('/Users/mpeng/Desktop/Firebase_keys/python_key.json')
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+    'storageBucket': os.getenv('REACT_APP_FIREBASE_STORAGE_BUCKET')
+})
 
 # Load environment variables
 load_dotenv()
@@ -133,20 +136,23 @@ def process_pdf():
 @app.route('/get-csv', methods=['GET'])
 def get_csv():
     try:
-        csv_url = request.args.get('csvUrl')
-        if not csv_url:
+        csv_filename = request.args.get('csvFileName')
+        if not csv_filename:
             return jsonify({
                 'status': 'error',
-                'message': 'No CSV URL provided'
+                'message': 'No CSV filename provided'
             }), 400
 
-        # Fetch CSV from the URL
-        response = requests.get(csv_url)
-        response.raise_for_status()  # Raise exception for bad status codes
-
-        # Read CSV content from the response
-        csv_content = io.StringIO(response.text)
-        csv_reader = csv.reader(csv_content)
+        # Get bucket and download CSV content
+        bucket = storage.bucket()
+        blob = bucket.blob(f'csvs/{csv_filename}')
+        
+        # Download as string
+        csv_content = blob.download_as_string().decode('utf-8')
+        
+        # Parse CSV content
+        csv_file = io.StringIO(csv_content)
+        csv_reader = csv.reader(csv_file)
         data = list(csv_reader)
 
         return jsonify({
@@ -162,16 +168,34 @@ def get_csv():
 @app.route('/save-csv', methods=['POST'])
 def save_csv():
     try:
+        print("Starting save_csv function...")
+        
+        # Get data from request
         data = request.json['data']
-        csv_path = os.path.expanduser("~/Desktop/converted_document.csv")
-        with open(csv_path, 'w', newline='') as file:
-            csv_writer = csv.writer(file)
-            csv_writer.writerows(data)
+        csv_filename = request.json['csvFileName']
+        print(f"Received data and filename: {csv_filename}")
+        
+        # Create CSV content in memory
+        csv_buffer = io.StringIO()
+        csv_writer = csv.writer(csv_buffer)
+        csv_writer.writerows(data)
+        csv_content = csv_buffer.getvalue()
+        print("Created CSV content in memory")
+        
+        # Get bucket and upload
+        bucket = storage.bucket()
+        blob = bucket.blob(f'csvs/{csv_filename}')
+        print(f"Created blob reference: csvs/{csv_filename}")
+        
+        blob.upload_from_string(csv_content, content_type='text/csv')
+        print("Successfully uploaded CSV to Firebase")
+        
         return jsonify({
             'status': 'success',
-            'message': 'CSV saved successfully'
+            'message': 'CSV saved successfully to Firebase'
         })
     except Exception as e:
+        print(f"Error saving CSV: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': str(e)

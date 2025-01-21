@@ -60,7 +60,7 @@ export default function PdfUpload() {
         
         // Navigate to PriceEdits with the CSV download URL
         navigate('/priceEdits', { 
-          state: { csvUrl: csvUrl }
+          state: { csvUrl: csvUrl, csvFileName: csvFileName }
         });
       }
       else {
