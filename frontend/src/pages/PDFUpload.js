@@ -53,11 +53,14 @@ export default function PdfUpload() {
         // Upload CSV to Firebase Storage
         const csvFileName = file.name.replace('.pdf', '.csv');
         const csvStorageRef = ref(storage, `csvs/${csvFileName}`);
-        await uploadBytes(csvStorageRef, csvBlob);
+        const csvUploadSnapshot = await uploadBytes(csvStorageRef, csvBlob);
         
-        // Navigate to PriceEdits with the CSV filename
+        // Get download URL for the CSV
+        const csvUrl = await getDownloadURL(csvUploadSnapshot.ref);
+        
+        // Navigate to PriceEdits with the CSV download URL
         navigate('/priceEdits', { 
-          state: { csvFileName: csvFileName }
+          state: { csvUrl: csvUrl }
         });
       }
       else {

@@ -9,15 +9,21 @@ from anthropic import Anthropic
 import io
 import base64
 import csv
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+
+# Initialize Firebase with your service account credentials
+cred = credentials.Certificate('/Users/mpeng/Desktop/Firebase_keys/python_key.json')
+firebase_admin.initialize_app(cred)
 
 # Load environment variables
 load_dotenv()
 
+db = firestore.client()
+
 # Initialize Anthropic client
 anthropic = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
-
-# cred = credentials.Certificate("path/to/serviceAccountKey.json")
-# firebase_admin.initialize_app(cred)
 
 
 app = Flask(__name__)
@@ -103,8 +109,8 @@ def process_pdf():
         # Save CSV file
         desktop_path = os.path.expanduser("~/Desktop")
         csv_filename = os.path.join(desktop_path, "converted_document.csv")
-        with open(csv_filename, 'w') as f:
-            f.write(csv_content)
+        # with open(csv_filename, 'w') as f:
+        #     f.write(csv_content)
         print("CSV file saved successfully")
         
         return jsonify({
@@ -127,10 +133,22 @@ def process_pdf():
 @app.route('/get-csv', methods=['GET'])
 def get_csv():
     try:
-        csv_path = os.path.expanduser("~/Desktop/converted_document.csv")
-        with open(csv_path, 'r') as file:
-            csv_reader = csv.reader(file)
-            data = list(csv_reader)
+        csv_url = request.args.get('csvUrl')
+        if not csv_url:
+            return jsonify({
+                'status': 'error',
+                'message': 'No CSV URL provided'
+            }), 400
+
+        # Fetch CSV from the URL
+        response = requests.get(csv_url)
+        response.raise_for_status()  # Raise exception for bad status codes
+
+        # Read CSV content from the response
+        csv_content = io.StringIO(response.text)
+        csv_reader = csv.reader(csv_content)
+        data = list(csv_reader)
+
         return jsonify({
             'status': 'success',
             'data': data

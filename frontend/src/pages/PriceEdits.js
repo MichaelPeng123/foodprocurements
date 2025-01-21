@@ -1,17 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 function PriceEdits() {
     const [csvData, setCsvData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [editingCell, setEditingCell] = useState(null);
+    const location = useLocation();
 
     useEffect(() => {
-        fetchCsvData();
+        FetchCsvData();
     }, []);
 
-    const fetchCsvData = async () => {
+    const FetchCsvData = async () => {
         try {
-            const response = await fetch('http://localhost:5005/get-csv');
+            const csvUrl = location.state?.csvUrl;
+            console.log("CSV URL: ", csvUrl);
+            
+            if (!csvUrl) {
+                console.error("No CSV URL provided");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:5005/get-csv?csvUrl=${encodeURIComponent(csvUrl)}`);
             const data = await response.json();
             if (data.status === 'success') {
                 const rows = data.data;
