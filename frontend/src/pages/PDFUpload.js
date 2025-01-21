@@ -40,7 +40,21 @@ export default function PdfUpload() {
         },
         body: JSON.stringify({ 'pdf_url': url }),
       });
-      console.log("Response: ", response);
+      
+      const data = await response.json();
+      console.log("Response: ", data);
+
+      if (data.csv_content) {
+        // Create a blob from the CSV content
+        const csvBlob = new Blob([data.csv_content], { type: 'text/csv' });
+        
+        // Upload CSV to Firebase Storage
+        const csvStorageRef = ref(storage, `csvs/${file.name.replace('.pdf', '.csv')}`);
+        await uploadBytes(csvStorageRef, csvBlob);
+      }
+      else {
+        setUploadStatus('Upload failed: ' + data.message);
+      }
 
       setUploadStatus('Upload successful!');
     } catch (error) {
