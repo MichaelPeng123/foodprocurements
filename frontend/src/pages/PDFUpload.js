@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { storage } from '../misc/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useNavigate } from 'react-router-dom';
 
 export default function PdfUpload() {
   const [file, setFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     if (e.target.files[0]) {
@@ -49,8 +51,14 @@ export default function PdfUpload() {
         const csvBlob = new Blob([data.csv_content], { type: 'text/csv' });
         
         // Upload CSV to Firebase Storage
-        const csvStorageRef = ref(storage, `csvs/${file.name.replace('.pdf', '.csv')}`);
+        const csvFileName = file.name.replace('.pdf', '.csv');
+        const csvStorageRef = ref(storage, `csvs/${csvFileName}`);
         await uploadBytes(csvStorageRef, csvBlob);
+        
+        // Navigate to PriceEdits with the CSV filename
+        navigate('/priceEdits', { 
+          state: { csvFileName: csvFileName }
+        });
       }
       else {
         setUploadStatus('Upload failed: ' + data.message);
