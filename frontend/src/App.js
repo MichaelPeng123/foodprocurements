@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import PdfUpload from './pages/PDFUpload';
 import SignIn from './pages/SignIn';
 import Database from './pages/Database';
+import PriceEdits from './pages/PriceEdits';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/pdfupload" element={<PdfUpload />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/database" element={<Database />} />
+          <Route path="/priceEdits" element={<PriceEdits />} />
         </Routes>
       </div>
     </Router>
