@@ -7,3 +7,5 @@ anthropic
 firebase-admin>=6.3.0
 google-cloud-firestore>=2.11.1
 google-auth>=2.22.0
+pandas
+openpyxl
