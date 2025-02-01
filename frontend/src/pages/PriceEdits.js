@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { db } from '../misc/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 function PriceEdits() {
     const [csvData, setCsvData] = useState([]);
     const [headers, setHeaders] = useState([]);
     const [editingCell, setEditingCell] = useState(null);
+    const [uploading, setUploading] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
 
     useEffect(() => {
         FetchCsvData();
@@ -64,6 +68,32 @@ function PriceEdits() {
         }
     };
 
+    const sendToFirebase = async () => {
+        try {
+            setUploading(true);
+            const foodDataRef = collection(db, 'foodData');
+            
+            // Process each row of CSV data
+            for (const row of csvData) {
+                const foodItem = headers.reduce((obj, header, index) => {
+                    obj[header.trim()] = row[index];
+                    return obj;
+                }, {});
+                
+                foodItem.createdAt = new Date();
+                await addDoc(foodDataRef, foodItem);
+            }
+            
+            alert('Successfully uploaded data to Firebase!');
+            navigate('/database');
+        } catch (error) {
+            console.error('Error uploading to Firebase:', error);
+            alert('Error uploading to Firebase: ' + error.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
     return (
         <div className="p-4">
             <h1 className="text-2xl font-bold mb-4">Price Edits</h1>
@@ -106,12 +136,25 @@ function PriceEdits() {
                     </tbody>
                 </table>
             </div>
-            <button 
-                onClick={saveChanges}
-                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-                Save Changes
-            </button>
+            <div className="mt-4 space-x-4">
+                <button 
+                    onClick={saveChanges}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                >
+                    Save Changes
+                </button>
+                <button 
+                    onClick={sendToFirebase}
+                    disabled={uploading}
+                    className={`px-4 py-2 rounded transition-colors ${
+                        uploading 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-green-500 hover:bg-green-600 text-white'
+                    }`}
+                >
+                    {uploading ? 'Uploading...' : 'Send to Database'}
+                </button>
+            </div>
         </div>
     );
 }
