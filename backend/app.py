@@ -26,8 +26,8 @@ db = firestore.client()
 anthropic = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 # Load XLSX reference file and convert to CSV
-reference_xlsx_path = '/Users/mpeng/Desktop/Food_Price_Procurement_Project/backend/foodCodes/only_food_GPC_values.xlsx'
-df = pd.read_excel(reference_xlsx_path)
+reference_csv_path = '/Users/mpeng/Desktop/Food_Price_Procurement_Project/backend/foodCodes/gpc_vals.csv'
+df = pd.read_csv(reference_csv_path)
 csv_buffer = io.StringIO()
 df.to_csv(csv_buffer, index=False)
 csv_base64 = base64.b64encode(csv_buffer.getvalue().encode()).decode('utf-8')
@@ -51,7 +51,7 @@ try:
                 },
                 {
                     "type": "text",
-                    "text": "This is a reference spreadsheet for classifying items. Use this as context for future PDF parsing tasks. No need to do any classification right now."
+                    "text": "This is a reference CSV file containing GPC classification codes. Use this as context for future PDF parsing tasks. No need to do any classification right now."
                 }
             ]
         }]
