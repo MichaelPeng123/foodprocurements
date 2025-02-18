@@ -68,12 +68,25 @@ def process_pdf():
 
         prompt = '''Parse this entire PDF document into a CSV format immediately. Output only the CSV data with no additional text or descriptions.
 
-        Use exactly these column headers:
-        Year,School District,Description,Family,Class,Price,Quantity,Serving Size (Per Quantity)
+        1. Description (The food item name)
+        2. Total Price (for the quantity purchased)
+        3. Quantity 
+        4. Pack Size (Number of serving size per quantity)
+        5. Price Per Quantity (The price at which the school purchased each quantity)
+        7. Serving Size (standardized values listed below, classified by the item description)
+        8. Price Per Serving Size (calculated by (Total Price) / (Quantity * Pack Size))
+
+        The following are the standardized serving sizes for each category of food item:
+        Fruit: 1 cup or 2 oz or 1/8th lb
+        Vegetable: 1 cup or 2 oz or 1/8th lb
+        Grains: 2 oz or 1/8 lb
+        Meat/Meat alternative: 2 oz or 1/8 lb
+        Fluid Milk: 1 cup or 2 oz
 
         Requirements:
         - Include every item from the document
         - Leave cells blank if data is not present
+        - For values that are not fully calculated out with notations like #, CT, BUNCH, EACH, division signs etc, simplify the value to the standarized label
         - Do not include any explanatory text
         - Do not ask for confirmation
         - Output only the CSV data starting with the header row'''
