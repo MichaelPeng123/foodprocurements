@@ -66,30 +66,27 @@ def process_pdf():
         base64_pdf = base64.b64encode(response.content).decode('utf-8')
         print("PDF encoded successfully")
 
-        prompt = '''Parse this entire PDF document into a CSV format immediately. Output only the CSV data with no additional text or descriptions.
+        prompt = '''Parse this entire XLSX file or PDF document into a CSV format immediately. Output only the CSV data with no additional text or descriptions.
 
         1. Description (The food item name)
-        2. Total Price (for the quantity purchased)
-        3. Quantity 
-        4. Pack Size (Number of serving size per quantity)
-        5. Price Per Quantity (The price at which the school purchased each quantity)
-        7. Serving Size (standardized values listed below, classified by the item description)
-        8. Price Per Serving Size (calculated by (Total Price) / (Quantity * Pack Size))
+        2. Price (for the quantity purchased. This is not the total amount spent. This is the average price per unit or price per unit)
+        3. Quantity
+        4. Pack Size (May be in the form of Pack/SizeUOM)
+        5. Pack (The first part of Pack Size without the middle divider)
+        6. Size (The second part of Pack Size without the middle divider)
+        7. UOM (This is the Units ex. OZ, LB, CT)
+        8. Price Per Pack. This is equal to Price / Pack
+        9. Price Per Pack Size. This is equal to Price / (Pack * Size)
 
-        The following are the standardized serving sizes for each category of food item:
-        Fruit: 1 cup or 2 oz or 1/8th lb
-        Vegetable: 1 cup or 2 oz or 1/8th lb
-        Grains: 2 oz or 1/8 lb
-        Meat/Meat alternative: 2 oz or 1/8 lb
-        Fluid Milk: 1 cup or 2 oz
 
-        Requirements:
+        Other Requirements:
         - Include every item from the document
+        - If there is no middle divider in Pack Size or there is only one number, fill Pack in with a 1, fill Size in with the number, and fill UOM with the units
         - Leave cells blank if data is not present
-        - For values that are not fully calculated out with notations like #, CT, BUNCH, EACH, division signs etc, simplify the value to the standarized label
+        - For values that are not fully calculated out with notations like #, CT, BUNCH, EACH, division signs etc, simplify the value to the standardized label
         - Do not include any explanatory text
         - Do not ask for confirmation
-        - Output only the CSV data starting with the header row'''
+        - output just the CSV data with the headers'''
 
         # Send to Claude API
         print("Sending to Claude API...")
