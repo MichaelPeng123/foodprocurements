@@ -15,23 +15,28 @@ function Navbar() {
     }
   };
 
+  // Custom style to remove underlines
+  const linkStyle = {
+    textDecoration: 'none'
+  };
+
   return (
     <nav className="bg-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="font-sans text-xl font-medium tracking-tight text-gray-800 hover:text-blue-600 transition-colors">
+          <Link to="/" className="font-sans text-xl font-medium tracking-tight text-gray-800 hover:text-blue-600 transition-colors" style={linkStyle}>
             MealMetrics
           </Link>
           
           <div className="flex space-x-6 items-center">
-            <Link to="/home" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+            <Link to="/home" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors" style={linkStyle}>
               Home
             </Link>
-            <Link to="/pdfupload" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+            <Link to="/pdfupload" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors" style={linkStyle}>
               Upload
             </Link>
-            <Link to="/database" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
-              Database
+            <Link to="/food-database" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors" style={linkStyle}>
+              Food Database
             </Link>
             {auth.currentUser ? (
               <button 
@@ -44,6 +49,7 @@ function Navbar() {
               <Link 
                 to="/signin" 
                 className="font-sans text-sm font-medium bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                style={linkStyle}
               >
                 Sign In
               </Link>

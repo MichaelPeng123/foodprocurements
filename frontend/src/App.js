@@ -6,6 +6,8 @@ import PdfUpload from './pages/PDFUpload';
 import SignIn from './pages/SignIn';
 import Database from './pages/Database';
 import PriceEdits from './pages/PriceEdits';
+import Display from './pages/Display';
+import FoodDatabase from './pages/FoodDatabase';
 
 function App() {
   return (
@@ -18,7 +20,9 @@ function App() {
           <Route path="/pdfupload" element={<PdfUpload />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/database" element={<Database />} />
+          <Route path="/food-database" element={<FoodDatabase />} />
           <Route path="/priceEdits" element={<PriceEdits />} />
+          <Route path="/display" element={<Display />} />
         </Routes>
       </div>
     </Router>

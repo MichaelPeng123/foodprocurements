@@ -1,4 +1,4 @@
-#!/Users/mpeng/Desktop/Food_Price_Procurement_Project/backend/venv/bin/python3
+#!/Users/mpeng/Desktop/Food_Price_Procurement_Project/backend/venv/bin/python3.10
 # -*- coding: utf-8 -*-
 import re
 import sys

@@ -3,7 +3,8 @@ Flask-CORS==4.0.0
 requests==2.31.0
 PyPDF2==3.0.1
 python-dotenv
-anthropic
+anthropic==0.5.0  # Changed to a more stable version
+httpx==0.25.0     # Updated to compatible version
 firebase-admin>=6.3.0
 google-cloud-firestore>=2.11.1
 google-auth>=2.22.0

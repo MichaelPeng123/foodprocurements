@@ -66,6 +66,11 @@ def process_pdf():
         base64_pdf = base64.b64encode(response.content).decode('utf-8')
         print("PDF encoded successfully")
 
+        # Read the food index file
+        food_index_path = os.path.join(os.path.dirname(__file__), 'foodCodes/food_index.txt')
+        with open(food_index_path, 'r') as f:
+            food_index_content = f.read()
+
         prompt = '''Parse this entire XLSX file or PDF document into a CSV format immediately. Output only the CSV data with no additional text or descriptions.
 
         1. Description (The food item name)
@@ -77,14 +82,16 @@ def process_pdf():
         7. UOM (This is the Units ex. OZ, LB, CT)
         8. Price Per Pack. This is equal to Price / Pack
         9. Price Per Pack Size. This is equal to Price / (Pack * Size)
+        10. Foodcode (referenced from the food index text file attatched, map it to the most probable category based on item description)
 
 
         Other Requirements:
+        - Do not include any explanatory text
         - Include every item from the document
+        - Include every item in a new line so it can be parsed properly
         - If there is no middle divider in Pack Size or there is only one number, fill Pack in with a 1, fill Size in with the number, and fill UOM with the units
         - Leave cells blank if data is not present
         - For values that are not fully calculated out with notations like #, CT, BUNCH, EACH, division signs etc, simplify the value to the standardized label
-        - Do not include any explanatory text
         - Do not ask for confirmation
         - output just the CSV data with the headers'''
 
@@ -103,6 +110,10 @@ def process_pdf():
                             "media_type": "application/pdf",
                             "data": base64_pdf
                         }
+                    },
+                    {
+                        "type": "text",
+                        "text": food_index_content
                     },
                     {
                         "type": "text",
@@ -206,6 +217,44 @@ def save_csv():
         })
     except Exception as e:
         print(f"Error saving CSV: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/food-index', methods=['GET'])
+def get_food_index():
+    try:
+        # Read the food index file
+        food_index_path = os.path.join(os.path.dirname(__file__), 'foodCodes/food_index.txt')
+        with open(food_index_path, 'r') as f:
+            food_index_content = f.read()
+        
+        # Parse the food index content
+        # Assuming each line is in the format "code:description" or similar
+        food_index_data = []
+        for line in food_index_content.strip().split('\n'):
+            if line.strip():  # Skip empty lines
+                parts = line.split(':', 1)  # Split on first colon
+                if len(parts) == 2:
+                    code, description = parts
+                    food_index_data.append({
+                        'code': code.strip(),
+                        'description': description.strip()
+                    })
+                else:
+                    # Handle lines without the expected format
+                    food_index_data.append({
+                        'text': line.strip()
+                    })
+        
+        return jsonify({
+            'status': 'success',
+            'data': food_index_data
+        })
+        
+    except Exception as e:
+        print(f"Error getting food index: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': str(e)
