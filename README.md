@@ -4,6 +4,17 @@
 
 The Food Price Procurement Project aims to assist clients in minimizing their food procurement costs by providing a comprehensive comparison of high school food prices. By leveraging data from various high schools, this project enables clients to make informed decisions and optimize their food expenses.
 
+## Instructions
+
+1. Open IDE
+2. Open terminals for backend and frontend
+3. run `cd frontend`
+4. run `cd backend` in the second terminal and run `.\venv\Scripts\activate.ps1`
+5. Run `python app.py` for backend
+6. Run `npm start` for frontend
+7. go to `localhost:3000` in browser
+8. check backend terminal for logs
+
 ## Features
 
 - **Data Collection**: Gather detailed food price data from multiple high schools.
