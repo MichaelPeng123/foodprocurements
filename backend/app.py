@@ -28,6 +28,7 @@ db = firestore.client()
 # Initialize Anthropic client
 anthropic = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
+print(dir(anthropic))
 
 app = Flask(__name__)
 CORS(app)  # This allows your React frontend to make requests
