@@ -94,6 +94,37 @@ function PriceEdits() {
         }
     };
 
+    const downloadCSV = () => {
+        // Combine headers and data
+        const fullData = [headers, ...csvData];
+        
+        // Convert to CSV format
+        const csvContent = fullData.map(row => row.join(',')).join('\n');
+        
+        // Create a Blob with the CSV data
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        
+        // Create a URL for the Blob
+        const url = URL.createObjectURL(blob);
+        
+        // Create a temporary link element to trigger the download
+        const link = document.createElement('a');
+        
+        // Set the download filename - use the original filename if available or a default name
+        const csvFileName = location.state?.csvFileName || 'data.csv';
+        
+        link.href = url;
+        link.setAttribute('download', csvFileName);
+        
+        // Append to the document, click it, and remove it
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Release the URL object
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="p-4">
             <h1 className="text-2xl font-bold mb-4">Price Edits</h1>
@@ -153,6 +184,12 @@ function PriceEdits() {
                     }`}
                 >
                     {uploading ? 'Uploading...' : 'Send to Database'}
+                </button>
+                <button 
+                    onClick={downloadCSV}
+                    className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors"
+                >
+                    Download CSV
                 </button>
             </div>
         </div>
