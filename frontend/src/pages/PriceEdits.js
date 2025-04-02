@@ -8,6 +8,8 @@ function PriceEdits() {
     const [headers, setHeaders] = useState([]);
     const [editingCell, setEditingCell] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [schoolName, setSchoolName] = useState('');
+    const [documentYear, setDocumentYear] = useState('');
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -80,6 +82,9 @@ function PriceEdits() {
                     return obj;
                 }, {});
                 
+                // Add school name and year to each document
+                foodItem.schoolName = schoolName;
+                foodItem.documentYear = documentYear;
                 foodItem.createdAt = new Date();
                 await addDoc(foodDataRef, foodItem);
             }
@@ -95,8 +100,14 @@ function PriceEdits() {
     };
 
     const downloadCSV = () => {
-        // Combine headers and data
-        const fullData = [headers, ...csvData];
+        // Create a new header row with school name and year columns
+        const enhancedHeaders = ['School Name', 'Document Year', ...headers];
+        
+        // Add school name and year to each row of data
+        const enhancedData = csvData.map(row => [schoolName, documentYear, ...row]);
+        
+        // Combine enhanced headers and data
+        const fullData = [enhancedHeaders, ...enhancedData];
         
         // Convert to CSV format
         const csvContent = fullData.map(row => row.join(',')).join('\n');
@@ -111,7 +122,13 @@ function PriceEdits() {
         const link = document.createElement('a');
         
         // Set the download filename - use the original filename if available or a default name
-        const csvFileName = location.state?.csvFileName || 'data.csv';
+        // Include school name and year in the filename if provided
+        let csvFileName = location.state?.csvFileName || 'data.csv';
+        if (schoolName && documentYear) {
+            // Remove .csv extension if present
+            csvFileName = csvFileName.replace('.csv', '');
+            csvFileName = `${csvFileName}_${schoolName}_${documentYear}.csv`;
+        }
         
         link.href = url;
         link.setAttribute('download', csvFileName);
@@ -166,6 +183,36 @@ function PriceEdits() {
                         ))}
                     </tbody>
                 </table>
+            </div>
+            <div className="mt-4 mb-4">
+                <div className="flex gap-4 mb-4">
+                    <div className="flex-1">
+                        <label htmlFor="schoolName" className="block text-sm font-medium text-gray-700 mb-1">
+                            School Name
+                        </label>
+                        <input
+                            type="text"
+                            id="schoolName"
+                            value={schoolName}
+                            onChange={(e) => setSchoolName(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter school name"
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <label htmlFor="documentYear" className="block text-sm font-medium text-gray-700 mb-1">
+                            Year
+                        </label>
+                        <input
+                            type="text"
+                            id="documentYear"
+                            value={documentYear}
+                            onChange={(e) => setDocumentYear(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter document year"
+                        />
+                    </div>
+                </div>
             </div>
             <div className="mt-4 space-x-4">
                 <button 

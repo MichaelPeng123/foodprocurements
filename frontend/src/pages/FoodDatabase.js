@@ -105,6 +105,46 @@ function FoodDatabase() {
     setSelectedItemCategory(e.target.value);
   };
 
+  // Add this function to handle CSV download
+  const downloadCSV = () => {
+    // Convert the data to CSV format using Papa Parse
+    const csv = Papa.unparse(filteredItems.map(item => {
+      const foodInfo = foodCodeMap[item.Foodcode] || {};
+      return {
+        Description: item.Description,
+        ItemCategory: foodInfo.description || 'N/A',
+        FoodGroup: foodInfo.foodgroups || 'N/A',
+        FoodSubgroup: foodInfo.foodsubgroups || 'N/A',
+        FoodCode: item.Foodcode,
+        DocumentYear: item.documentYear || 'N/A',
+        SchoolDistrict: item.schoolName || 'N/A',
+        Price: item.Price,
+        Quantity: item.Quantity,
+        PackSize: item["Pack Size"],
+        Pack: item.Pack,
+        Size: item.Size,
+        UOM: item.UOM,
+        PricePerPack: item["Price Per Pack"],
+        PricePerPackSize: item["Price Per Pack Size"]
+      };
+    }));
+    
+    // Create a Blob with the CSV data
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    
+    // Create a temporary link to trigger the download
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'food_database_export.csv');
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
@@ -198,9 +238,21 @@ function FoodDatabase() {
         </div>
       </div>
 
-      {/* Results count */}
-      <div className="mb-4 text-sm text-gray-600">
-        Showing {filteredItems.length} of {foodItems.length} items
+      {/* Results count and download button */}
+      <div className="mb-4 flex justify-between items-center">
+        <div className="text-sm text-gray-600">
+          Showing {filteredItems.length} of {foodItems.length} items
+        </div>
+        
+        <button
+          onClick={downloadCSV}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Download CSV
+        </button>
       </div>
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden overflow-x-auto">
@@ -212,6 +264,8 @@ function FoodDatabase() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Food Group</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Food Subgroup</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Food Code</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Year</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School District</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pack Size</th>
@@ -234,6 +288,8 @@ function FoodDatabase() {
                   <td className="px-6 py-4 whitespace-nowrap">{foodInfo.foodgroups || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{foodInfo.foodsubgroups || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.Foodcode}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.documentYear || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.schoolName || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.Price}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.Quantity}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item["Pack Size"]}</td>
