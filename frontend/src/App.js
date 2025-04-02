@@ -8,6 +8,7 @@ import Database from './pages/Database';
 import PriceEdits from './pages/PriceEdits';
 import Display from './pages/Display';
 import FoodDatabase from './pages/FoodDatabase';
+import SupabaseTest from './pages/supabaseTest';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/food-database" element={<FoodDatabase />} />
           <Route path="/priceEdits" element={<PriceEdits />} />
           <Route path="/display" element={<Display />} />
+          <Route path="/supabaseTest" element={<SupabaseTest />} />
         </Routes>
       </div>
     </Router>
