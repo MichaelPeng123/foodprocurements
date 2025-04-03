@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { storage } from '../misc/firebase';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
+import supabase from '../misc/supabaseClient';
 
 export default function PdfUpload() {
   const [file, setFile] = useState(null);
@@ -26,21 +25,28 @@ export default function PdfUpload() {
     try {
       setUploadStatus('Uploading...');
 
-      const storage = getStorage();
-      const storageRef = ref(storage, `pdfs/${file.name}`);
+      // Upload PDF to Supabase storage
+      const pdfFileName = `${Date.now()}_${file.name}`;
+      const { data: pdfData, error: pdfError } = await supabase.storage
+        .from('food-documents')
+        .upload(`pdfs/${pdfFileName}`, file);
       
-      const uploadSnapshot = await uploadBytes(storageRef, file);
-      console.log('Uploaded a blob or file!', uploadSnapshot);
+      if (pdfError) throw pdfError;
       
-      const url = await getDownloadURL(uploadSnapshot.ref);
-      console.log("URL: ", url);
+      // Get public URL for the uploaded PDF
+      const { data: { publicUrl: pdfUrl } } = supabase.storage
+        .from('food-documents')
+        .getPublicUrl(`pdfs/${pdfFileName}`);
       
+      console.log("PDF URL: ", pdfUrl);
+      
+      // Send to backend for processing
       const response = await fetch('http://localhost:5005/process-pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 'pdf_url': url }),
+        body: JSON.stringify({ 'pdf_url': pdfUrl }),
       });
       
       const data = await response.json();
@@ -50,13 +56,18 @@ export default function PdfUpload() {
         // Create a blob from the CSV content
         const csvBlob = new Blob([data.csv_content], { type: 'text/csv' });
         
-        // Upload CSV to Firebase Storage
-        const csvFileName = file.name.replace('.pdf', '.csv');
-        const csvStorageRef = ref(storage, `csvs/${csvFileName}`);
-        const csvUploadSnapshot = await uploadBytes(csvStorageRef, csvBlob);
+        // Upload CSV to Supabase Storage
+        const csvFileName = pdfFileName.replace('.pdf', '.csv');
+        const { data: csvData, error: csvError } = await supabase.storage
+          .from('food-documents')
+          .upload(`csvs/${csvFileName}`, csvBlob);
         
-        // Get download URL for the CSV
-        const csvUrl = await getDownloadURL(csvUploadSnapshot.ref);
+        if (csvError) throw csvError;
+        
+        // Get public URL for the CSV
+        const { data: { publicUrl: csvUrl } } = supabase.storage
+          .from('food-documents')
+          .getPublicUrl(`csvs/${csvFileName}`);
         
         // Navigate to PriceEdits with the CSV download URL
         navigate('/priceEdits', { 

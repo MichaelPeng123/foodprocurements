@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || "https://bbbhdeehblyakaojszzy.supabase.co";
-const supabaseKey = process.env.REACT_APP_SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJiYmhkZWVoYmx5YWthb2pzenp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2Mjk5MzMsImV4cCI6MjA1OTIwNTkzM30.3NTqO6GVztVJ3cxlbiXDTp2eDqaVpoPwi2Bey5yt074";
-const supabase = createClient(supabaseUrl, supabaseKey);
+import supabase from '../misc/supabaseClient';
 
 function SignUp() {
   const [email, setEmail] = useState('');
