@@ -1,14 +1,46 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAuth, signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 function Navbar() {
   const navigate = useNavigate();
-  const auth = getAuth();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check for user session on component mount
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user || null);
+      setLoading(false);
+      
+      // Set up listener for auth state changes
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          setUser(session?.user || null);
+        }
+      );
+      
+      // Clean up subscription
+      return () => {
+        if (authListener?.subscription) {
+          authListener.subscription.unsubscribe();
+        }
+      };
+    };
+    
+    checkUser();
+  }, []);
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       navigate('/signin');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -38,7 +70,10 @@ function Navbar() {
             <Link to="/food-database" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors" style={linkStyle}>
               Food Database
             </Link>
-            {auth.currentUser ? (
+            {loading ? (
+              // Show a loading placeholder while checking auth state
+              <div className="w-20 h-10 bg-gray-200 animate-pulse rounded"></div>
+            ) : user ? (
               <button 
                 onClick={handleSignOut} 
                 className="font-sans text-sm font-medium bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"

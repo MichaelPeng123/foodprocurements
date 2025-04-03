@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../misc/firebase';
-import { collection, getDocs } from "firebase/firestore";
-import { Container, Row, Col, Form, Table, Spinner } from 'react-bootstrap';
+import { Form, Spinner } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Papa from 'papaparse';
 import foodData from '../data/foodData';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || "https://bbbhdeehblyakaojszzy.supabase.co";
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJiYmhkZWVoYmx5YWthb2pzenp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2Mjk5MzMsImV4cCI6MjA1OTIwNTkzM30.3NTqO6GVztVJ3cxlbiXDTp2eDqaVpoPwi2Bey5yt074";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 function FoodDatabase() {
   // Database state
@@ -59,19 +63,35 @@ function FoodDatabase() {
   useEffect(() => {
     const fetchFoodItems = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "foodData"));
-        const items = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data
-          };
-        });
+        // Fetch data from Supabase instead of Firebase
+        const { data, error: supabaseError } = await supabase
+          .from('food_data')
+          .select('*');
+        
+        if (supabaseError) throw supabaseError;
+        
+        // Transform data to match the expected format
+        const items = data.map(item => ({
+          id: item.id,
+          Description: item.Description,
+          Foodcode: item.Food_Code?.toString() || '', // Map Food_Code to Foodcode for compatibility
+          documentYear: item.Document_year,
+          schoolName: item.School_name,
+          Price: item.Price,
+          Quantity: item.Quantity,
+          "Pack Size": item.Pack_size,
+          Pack: item.Pack,
+          Size: item.Size,
+          UOM: item.UOM,
+          "Price Per Pack": item.Price_per_pack,
+          "Price Per Pack Size": item.Per_per_pack_size
+        }));
+        
         setFoodItems(items);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching food items:", err);
-        setError("Failed to fetch food items");
+        setError("Failed to fetch food items: " + (err.message || "Unknown error"));
         setLoading(false);
       }
     };
@@ -134,34 +154,45 @@ function FoodDatabase() {
     
     // Create a temporary link to trigger the download
     const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'food_database_export.csv');
-    link.style.visibility = 'hidden';
-    
+    link.href = URL.createObjectURL(blob);
+    link.download = 'food_database_export.csv';
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
+    
+    // Clean up
     document.body.removeChild(link);
   };
 
   if (loading) {
     return (
-      <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+      <div className="container mx-auto px-4 py-8 text-center">
         <Spinner animation="border" role="status">
           <span className="visually-hidden">Loading...</span>
         </Spinner>
-      </Container>
+        <p className="mt-2">Loading food database...</p>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Container className="mt-5">
-        <div className="alert alert-danger" role="alert">
-          {error}
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                {error}
+              </p>
+            </div>
+          </div>
         </div>
-      </Container>
+      </div>
     );
   }
 

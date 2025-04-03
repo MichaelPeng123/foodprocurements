@@ -1,21 +1,55 @@
 import { useState } from 'react';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const auth = getAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate('/home');
+      // Sign in with Supabase Auth
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) throw signInError;
+
+      if (data?.user) {
+        // Update last login timestamp
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', data.user.id);
+
+        if (updateError) {
+          console.error("Error updating last login:", updateError);
+        }
+
+        // Navigate to home page after successful sign-in
+        navigate('/home');
+      }
     } catch (error) {
-      setError(error.message);
+      let errorMessage = 'Invalid email or password. Please try again.';
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -23,6 +57,13 @@ function SignIn() {
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-sm">
         <h1 className="font-sans text-2xl font-medium text-gray-800 mb-8 tracking-tight">Sign In to MealMetrics</h1>
+        
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded font-medium">
+            {error}
+          </div>
+        )}
+        
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
             <label className="block font-sans text-sm font-medium text-gray-700 mb-2">Email</label>
@@ -47,15 +88,22 @@ function SignIn() {
           <button
             type="submit"
             className="w-full bg-blue-500 text-white py-3 px-4 rounded font-medium hover:bg-blue-600 transition-colors"
+            disabled={loading}
           >
-            Sign In
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-        {error && (
-          <div className="mt-6 p-4 bg-red-50 text-red-600 rounded font-medium">
-            {error}
-          </div>
-        )}
+        
+        {/* Sign Up button and account creation section */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <p className="text-center text-gray-600 mb-4">Don't have an account?</p>
+          <button 
+            onClick={() => navigate('/signup')}
+            className="w-full bg-white text-blue-500 py-3 px-4 rounded font-medium border border-blue-500 hover:bg-blue-50 transition-colors"
+          >
+            Create an Account
+          </button>
+        </div>
       </div>
     </div>
   );

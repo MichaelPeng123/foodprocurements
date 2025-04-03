@@ -4,6 +4,7 @@ import Navbar from './pages/Navbar';
 import Home from './pages/Home';
 import PdfUpload from './pages/PDFUpload';
 import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
 import Database from './pages/Database';
 import PriceEdits from './pages/PriceEdits';
 import Display from './pages/Display';
@@ -20,6 +21,7 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/pdfupload" element={<PdfUpload />} />
           <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
           <Route path="/database" element={<Database />} />
           <Route path="/food-database" element={<FoodDatabase />} />
           <Route path="/priceEdits" element={<PriceEdits />} />
