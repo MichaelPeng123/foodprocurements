@@ -13,6 +13,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from firebase_admin import storage
+from supabase import create_client
 
 # Initialize Firebase with your service account credentials
 cred = credentials.Certificate('/Users/mpeng/Desktop/Firebase_keys/python_key.json')
@@ -32,6 +33,11 @@ print(dir(anthropic))
 
 app = Flask(__name__)
 CORS(app)  # This allows your React frontend to make requests
+
+# Initialize Supabase client
+supabase_url = os.getenv('REACT_APP_SUPABASE_URL')
+supabase_key = os.getenv('REACT_APP_SUPABASE_KEY')
+supabase = create_client(supabase_url, supabase_key)
 
 # Example route
 @app.route('/api/test', methods=['GET'])
@@ -165,12 +171,12 @@ def get_csv():
                 'message': 'No CSV filename provided'
             }), 400
 
-        # Get bucket and download CSV content
-        bucket = storage.bucket()
-        blob = bucket.blob(f'csvs/{csv_filename}')
+        # Get CSV content from Supabase storage using the food-documents bucket
+        # and the csvs/ directory path
+        response = supabase.storage.from_('food-documents').download(f'csvs/{csv_filename}')
         
-        # Download as string
-        csv_content = blob.download_as_string().decode('utf-8')
+        # Decode the response to a string
+        csv_content = response.decode('utf-8')
         
         # Parse CSV content
         csv_file = io.StringIO(csv_content)

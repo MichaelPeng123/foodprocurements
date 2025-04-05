@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { db } from '../misc/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import supabase from '../misc/supabaseClient';
 
 function PriceEdits() {
     const [csvData, setCsvData] = useState([]);
@@ -70,30 +69,49 @@ function PriceEdits() {
         }
     };
 
-    const sendToFirebase = async () => {
+    const sendToSupabase = async () => {
         try {
             setUploading(true);
-            const foodDataRef = collection(db, 'foodData');
             
             // Process each row of CSV data
-            for (const row of csvData) {
+            const foodItems = csvData.map(row => {
+                // Create an object mapping headers to values
                 const foodItem = headers.reduce((obj, header, index) => {
                     obj[header.trim()] = row[index];
                     return obj;
                 }, {});
                 
-                // Add school name and year to each document
-                foodItem.schoolName = schoolName;
-                foodItem.documentYear = documentYear;
-                foodItem.createdAt = new Date();
-                await addDoc(foodDataRef, foodItem);
-            }
+                // Format data according to Supabase schema
+                return {
+                    Description: foodItem.Description || '',
+                    Pack: parseInt(foodItem.Pack) || 0,
+                    Pack_size: foodItem["Pack Size"] || '',
+                    Price: parseFloat(foodItem.Price) || 0,
+                    Price_per_pack: parseFloat(foodItem["Price Per Pack"]) || 0,
+                    Per_per_pack_size: parseFloat(foodItem["Price Per Pack Size"]) || 0,
+                    Quantity: parseInt(foodItem.Quantity) || 0,
+                    Size: parseInt(foodItem.Size) || 0,
+                    UOM: foodItem.UOM || '',
+                    Document_year: parseInt(documentYear) || new Date().getFullYear(),
+                    School_name: schoolName || 'Unknown',
+                    Food_Code: parseInt(foodItem.Foodcode) || null,
+                    created_at: new Date().toISOString()
+                };
+            });
             
-            alert('Successfully uploaded data to Firebase!');
-            navigate('/database');
+            // Insert data into Supabase
+            const { data, error } = await supabase
+                .from('food_data')
+                .insert(foodItems)
+                .select();
+            
+            if (error) throw error;
+            
+            alert(`Successfully uploaded ${data.length} items to the database!`);
+            navigate('/food-database');
         } catch (error) {
-            console.error('Error uploading to Firebase:', error);
-            alert('Error uploading to Firebase: ' + error.message);
+            console.error('Error uploading to Supabase:', error);
+            alert('Error uploading to Supabase: ' + error.message);
         } finally {
             setUploading(false);
         }
@@ -222,7 +240,7 @@ function PriceEdits() {
                     Save Changes
                 </button>
                 <button 
-                    onClick={sendToFirebase}
+                    onClick={sendToSupabase}
                     disabled={uploading}
                     className={`px-4 py-2 rounded transition-colors ${
                         uploading 
