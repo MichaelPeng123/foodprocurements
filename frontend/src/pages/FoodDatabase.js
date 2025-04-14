@@ -4,6 +4,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Papa from 'papaparse';
 import foodData from '../data/foodData';
 import { createClient } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || "https://bbbhdeehblyakaojszzy.supabase.co";
@@ -11,6 +12,7 @@ const supabaseKey = process.env.REACT_APP_SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsI
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function FoodDatabase() {
+  const navigate = useNavigate();
   // Database state
   const [foodItems, setFoodItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,8 @@ function FoodDatabase() {
   const [itemCategories, setItemCategories] = useState([]);
   const [selectedItemCategory, setSelectedItemCategory] = useState('All');
   const [foodCodeMap, setFoodCodeMap] = useState({});
+  // Add year range filter state
+  const [yearRange, setYearRange] = useState({ min: 2018, max: 2023 });
 
   useEffect(() => {
     // Parse the food data CSV to create a mapping of food codes to their details
@@ -164,6 +168,11 @@ function FoodDatabase() {
     document.body.removeChild(link);
   };
 
+  // Add function to handle navigation to analysis page
+  const handleRunQuery = () => {
+    navigate('/analysis');
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -229,6 +238,36 @@ function FoodDatabase() {
         
         {/* Filters Container - Aligned to the right */}
         <div className="flex flex-wrap gap-4 justify-end">
+          {/* Year Range Filter */}
+          <div className="w-64">
+            <Form.Group>
+              <Form.Label className="text-sm font-medium text-gray-700">Year Range</Form.Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="2000"
+                  max="2023"
+                  value={yearRange.min}
+                  onChange={(e) => setYearRange({...yearRange, min: parseInt(e.target.value)})}
+                  className="w-24 px-2 py-2 rounded-lg border border-gray-300 
+                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                            outline-none transition-colors"
+                />
+                <span className="text-gray-500">to</span>
+                <input
+                  type="number"
+                  min="2000"
+                  max="2023"
+                  value={yearRange.max}
+                  onChange={(e) => setYearRange({...yearRange, max: parseInt(e.target.value)})}
+                  className="w-24 px-2 py-2 rounded-lg border border-gray-300 
+                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                            outline-none transition-colors"
+                />
+              </div>
+            </Form.Group>
+          </div>
+          
           {/* Food Group Filter */}
           <div className="w-48">
             <Form.Group>
@@ -275,15 +314,27 @@ function FoodDatabase() {
           Showing {filteredItems.length} of {foodItems.length} items
         </div>
         
-        <button
-          onClick={downloadCSV}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Download CSV
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleRunQuery}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            Run Query
+          </button>
+
+          <button
+            onClick={downloadCSV}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download CSV
+          </button>
+        </div>
       </div>
 
       <div className="bg-white shadow-md rounded-lg overflow-hidden overflow-x-auto">
