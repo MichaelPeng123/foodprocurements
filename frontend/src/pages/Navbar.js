@@ -70,6 +70,9 @@ function Navbar() {
             <Link to="/food-database" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors" style={linkStyle}>
               Food Database
             </Link>
+            <Link to="/purchase-categories" className="font-sans text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors" style={linkStyle}>
+              Purchase Analytics
+            </Link>
             {loading ? (
               // Show a loading placeholder while checking auth state
               <div className="w-20 h-10 bg-gray-200 animate-pulse rounded"></div>

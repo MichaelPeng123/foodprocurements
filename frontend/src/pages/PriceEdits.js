@@ -9,8 +9,18 @@ function PriceEdits() {
     const [uploading, setUploading] = useState(false);
     const [schoolName, setSchoolName] = useState('');
     const [documentYear, setDocumentYear] = useState('');
+    const [state, setState] = useState('');
     const location = useLocation();
     const navigate = useNavigate();
+
+    // List of all 50 US states
+    const usStates = [
+        'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 
+        'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 
+        'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 
+        'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 
+        'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+    ];
 
     useEffect(() => {
         FetchCsvData();
@@ -89,11 +99,13 @@ function PriceEdits() {
                     Price: parseFloat(foodItem.Price) || 0,
                     Price_per_pack: parseFloat(foodItem["Price Per Pack"]) || 0,
                     Per_per_pack_size: parseFloat(foodItem["Price Per Pack Size"]) || 0,
+                    Price_per_lb: parseFloat(foodItem["Price Per Lb"]) || 0,
                     Quantity: parseInt(foodItem.Quantity) || 0,
                     Size: parseInt(foodItem.Size) || 0,
                     UOM: foodItem.UOM || '',
                     Document_year: parseInt(documentYear) || new Date().getFullYear(),
                     School_name: schoolName || 'Unknown',
+                    State: state || 'Unknown',
                     Food_Code: parseInt(foodItem.Foodcode) || null,
                     created_at: new Date().toISOString()
                 };
@@ -118,11 +130,11 @@ function PriceEdits() {
     };
 
     const downloadCSV = () => {
-        // Create a new header row with school name and year columns
-        const enhancedHeaders = ['School Name', 'Document Year', ...headers];
+        // Create a new header row with additional columns
+        const enhancedHeaders = ['School Name', 'State', 'Document Year', ...headers];
         
-        // Add school name and year to each row of data
-        const enhancedData = csvData.map(row => [schoolName, documentYear, ...row]);
+        // Add school name, state and year to each row of data
+        const enhancedData = csvData.map(row => [schoolName, state, documentYear, ...row]);
         
         // Combine enhanced headers and data
         const fullData = [enhancedHeaders, ...enhancedData];
@@ -140,12 +152,12 @@ function PriceEdits() {
         const link = document.createElement('a');
         
         // Set the download filename - use the original filename if available or a default name
-        // Include school name and year in the filename if provided
+        // Include school name, state, and year in the filename if provided
         let csvFileName = location.state?.csvFileName || 'data.csv';
-        if (schoolName && documentYear) {
+        if (schoolName && state && documentYear) {
             // Remove .csv extension if present
             csvFileName = csvFileName.replace('.csv', '');
-            csvFileName = `${csvFileName}_${schoolName}_${documentYear}.csv`;
+            csvFileName = `${csvFileName}_${schoolName}_${state}_${documentYear}.csv`;
         }
         
         link.href = url;
@@ -216,6 +228,22 @@ function PriceEdits() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Enter school name"
                         />
+                    </div>
+                    <div className="flex-1">
+                        <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+                            State
+                        </label>
+                        <select
+                            id="state"
+                            value={state}
+                            onChange={(e) => setState(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">-- Select State --</option>
+                            {usStates.map(stateCode => (
+                                <option key={stateCode} value={stateCode}>{stateCode}</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="flex-1">
                         <label htmlFor="documentYear" className="block text-sm font-medium text-gray-700 mb-1">

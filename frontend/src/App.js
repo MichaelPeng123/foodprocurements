@@ -10,6 +10,7 @@ import PriceEdits from './pages/PriceEdits';
 import Display from './pages/Display';
 import FoodDatabase from './pages/FoodDatabase';
 import Analysis from './pages/Analysis/Analysis';
+import TopPurchaseCategories from './pages/TopPurchaseCategories';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="/priceEdits" element={<PriceEdits />} />
           <Route path="/display" element={<Display />} />
           <Route path="/analysis" element={<Analysis />} />
+          <Route path="/purchase-categories" element={<TopPurchaseCategories />} />
         </Routes>
       </div>
     </Router>

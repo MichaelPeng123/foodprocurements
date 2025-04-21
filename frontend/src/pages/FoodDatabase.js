@@ -78,9 +78,10 @@ function FoodDatabase() {
         const items = data.map(item => ({
           id: item.id,
           Description: item.Description,
-          Foodcode: item.Food_Code?.toString() || '', // Map Food_Code to Foodcode for compatibility
+          Foodcode: item.Food_Code?.toString() || '',
           documentYear: item.Document_year,
           schoolName: item.School_name,
+          state: item.State || '',
           Price: item.Price,
           Quantity: item.Quantity,
           "Pack Size": item.Pack_size,
@@ -88,7 +89,8 @@ function FoodDatabase() {
           Size: item.Size,
           UOM: item.UOM,
           "Price Per Pack": item.Price_per_pack,
-          "Price Per Pack Size": item.Per_per_pack_size
+          "Price Per Pack Size": item.Per_per_pack_size,
+          "Price Per Lb": item.price_per_lb || 0
         }));
         
         setFoodItems(items);
@@ -142,6 +144,7 @@ function FoodDatabase() {
         FoodCode: item.Foodcode,
         DocumentYear: item.documentYear || 'N/A',
         SchoolDistrict: item.schoolName || 'N/A',
+        State: item.state || 'N/A',
         Price: item.Price,
         Quantity: item.Quantity,
         PackSize: item["Pack Size"],
@@ -149,7 +152,8 @@ function FoodDatabase() {
         Size: item.Size,
         UOM: item.UOM,
         PricePerPack: item["Price Per Pack"],
-        PricePerPackSize: item["Price Per Pack Size"]
+        PricePerPackSize: item["Price Per Pack Size"],
+        PricePerLb: item["Price Per Lb"]
       };
     }));
     
@@ -348,6 +352,7 @@ function FoodDatabase() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Food Code</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Year</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School District</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pack Size</th>
@@ -356,6 +361,7 @@ function FoodDatabase() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UOM</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price Per Pack</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price Per Pack Size</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price Per Lb</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -372,6 +378,7 @@ function FoodDatabase() {
                   <td className="px-6 py-4 whitespace-nowrap">{item.Foodcode}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.documentYear || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.schoolName || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.state || 'N/A'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.Price}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.Quantity}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item["Pack Size"]}</td>
@@ -380,6 +387,7 @@ function FoodDatabase() {
                   <td className="px-6 py-4 whitespace-nowrap">{item.UOM}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item["Price Per Pack"]}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item["Price Per Pack Size"]}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item["Price Per Lb"]}</td>
                 </tr>
               );
             })}

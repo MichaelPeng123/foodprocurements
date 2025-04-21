@@ -87,20 +87,27 @@ def process_pdf():
         5. Pack (The first part of Pack Size without the middle divider)
         6. Size (The second part of Pack Size without the middle divider)
         7. UOM (This is the Units ex. OZ, LB, CT)
-        8. Price Per Pack. This is equal to Price / Pack
-        9. Price Per Pack Size. This is equal to Price / (Pack * Size)
-        10. Foodcode (referenced from the food index text file attatched, map it to the most probable category based on item description)
+        8. Total Price. This is Equal to Price * Quantity
+        9. Price Per Pack. This is equal to Price / Pack
+        10. Price Per Pack Size. This is equal to Price / (Pack * Size)
+        11. Price Per Pound. This is currently a filler column. Insert a random value between 2 and 15
+        12. Foodcode (referenced from the food index text file attatched, map it to the most probable category based on item description)
 
 
         Other Requirements:
+        - Do not include dollar signs
+        - These values are not dates. Do not record them as such.
         - Do not include any explanatory text
         - Include every item from the document
         - Include every item in a new line so it can be parsed properly
         - If there is no middle divider in Pack Size or there is only one number, fill Pack in with a 1, fill Size in with the number, and fill UOM with the units
         - Leave cells blank if data is not present
-        - For values that are not fully calculated out with notations like #, CT, BUNCH, EACH, division signs etc, simplify the value to the standardized label
-        - Do not ask for confirmation
-        - output just the CSV data with the headers'''
+        - For values that are not fully calculated out with notations like #, CT, BUNCH, EACH, division signs etc, simplify the value to the standardized label   
+        - Determine the total number of rows in the document
+        - Do not stop until you have reached the last row in the document
+        - Display every row that is processed. Do not truncate any rows.
+        - Do not ask for confirmation. Proceed with processing the remaining rows
+        - Output just the CSV data with the headers'''
 
         # Send to Claude API
         print("Sending to Claude API...")
