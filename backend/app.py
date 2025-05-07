@@ -16,7 +16,7 @@ from firebase_admin import storage
 from supabase import create_client
 
 # Initialize Firebase with your service account credentials
-cred = credentials.Certificate('/Users/mpeng/Desktop/Firebase_keys/python_key.json')
+cred = credentials.Certificate('../python_key.json')
 firebase_admin.initialize_app(cred, {
     'storageBucket': os.getenv('REACT_APP_FIREBASE_STORAGE_BUCKET')
 })
@@ -35,8 +35,8 @@ app = Flask(__name__)
 CORS(app)  # This allows your React frontend to make requests
 
 # Initialize Supabase client
-supabase_url = os.getenv('REACT_APP_SUPABASE_URL')
-supabase_key = os.getenv('REACT_APP_SUPABASE_KEY')
+supabase_url = os.getenv('SUPABASE_PUBLIC_URL')
+supabase_key =  os.getenv('SUPABASE_PUBLIC_ANON_KEY')
 supabase = create_client(supabase_url, supabase_key)
 
 # Example route
@@ -112,8 +112,9 @@ def process_pdf():
         # Send to Claude API
         print("Sending to Claude API...")
         message = anthropic.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=4000,
+            #model="claude-3-5-sonnet-20241022",
+            model="claude-3-7-sonnet-20250219",
+            max_tokens=20000,
             messages=[{
                 "role": "user",
                 "content": [
