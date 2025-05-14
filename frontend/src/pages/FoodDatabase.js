@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Spinner } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import Papa from 'papaparse';
-import foodData from '../data/foodData';
 import { createClient } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || "https://bbbhdeehblyakaojszzy.supabase.co";
@@ -18,163 +17,74 @@ function FoodDatabase() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Category filter state
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [itemCategories, setItemCategories] = useState([]);
-  const [selectedItemCategory, setSelectedItemCategory] = useState('All');
-  const [foodCodeMap, setFoodCodeMap] = useState({});
   // Add year range filter state
   const [yearRange, setYearRange] = useState({ min: 2018, max: 2023 });
-
-  useEffect(() => {
-    // Parse the food data CSV to create a mapping of food codes to their details
-    try {
-      Papa.parse(foodData, {
-        header: true,
-        delimiter: ",",
-        quoteChar: '"',
-        skipEmptyLines: true,
-        complete: (results) => {
-          // Create a map of food codes to their details
-          const foodMap = {};
-          results.data.forEach(item => {
-            if (item.foodcode) {
-              foodMap[item.foodcode] = {
-                description: item.description,
-                foodgroups: item.foodgroups,
-                foodsubgroups: item.foodsubgroups
-              };
-            }
-          });
-          setFoodCodeMap(foodMap);
-          
-          // Extract unique categories
-          const uniqueCategories = [...new Set(results.data.map(item => item.foodgroups))].filter(Boolean);
-          setCategories(uniqueCategories);
-          
-          // Extract unique item categories (descriptions)
-          const uniqueItemCategories = [...new Set(results.data.map(item => item.description))].filter(Boolean);
-          setItemCategories(uniqueItemCategories);
-        }
-      });
-    } catch (err) {
-      console.error("Error parsing food data:", err);
-    }
-  }, []);
+  // New: For category filters, get unique values from DB data
+  const [itemCategories, setItemCategories] = useState([]);
+  const [selectedItemCategory, setSelectedItemCategory] = useState('All');
+  const [foodGroups, setFoodGroups] = useState([]);
+  const [selectedFoodGroup, setSelectedFoodGroup] = useState('All');
 
   useEffect(() => {
     const fetchFoodItems = async () => {
       try {
-        // Fetch data from Supabase instead of Firebase
+        // Fetch data from Supabase
         const { data, error: supabaseError } = await supabase
           .from('food_data')
           .select('*');
-        
         if (supabaseError) throw supabaseError;
-        
-        // Transform data to match the expected format
-        const items = data.map(item => ({
-          id: item.id,
-          Description: item.Description,
-          Foodcode: item.Food_Code?.toString() || '',
-          documentYear: item.Document_year,
-          schoolName: item.School_name,
-          state: item.State || '',
-          Price: item.Price,
-          Quantity: item.Quantity,
-          "Pack Size": item.Pack_size,
-          Pack: item.Pack,
-          Size: item.Size,
-          UOM: item.UOM,
-          "Price Per Pack": item.Price_per_pack,
-          "Price Per Pack Size": item.Per_per_pack_size,
-          "Price Per Lb": item.price_per_lb || 0
-        }));
-        
-        setFoodItems(items);
+        setFoodItems(data);
+        // Extract unique food groups and item categories from DB data
+        setFoodGroups([
+          ...new Set(data.map(item => item.food_group).filter(Boolean))
+        ]);
+        setItemCategories([
+          ...new Set(data.map(item => item.item_category).filter(Boolean))
+        ]);
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching food items:", err);
         setError("Failed to fetch food items: " + (err.message || "Unknown error"));
         setLoading(false);
       }
     };
-
     fetchFoodItems();
   }, []);
 
   // Filter items based on search term and selected categories
   const filteredItems = foodItems.filter(item => {
     const matchesSearch = item.Description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const foodCode = item.Foodcode;
-    const foodInfo = foodCodeMap[foodCode] || {};
-    
-    // Check if it matches the food group category filter
-    const matchesFoodGroup = selectedCategory === 'All' || 
-                            (foodInfo.foodgroups && foodInfo.foodgroups === selectedCategory);
-    
-    // Check if it matches the item category filter
-    const matchesItemCategory = selectedItemCategory === 'All' || 
-                               (foodInfo.description && foodInfo.description === selectedItemCategory);
-    
+    const matchesFoodGroup = selectedFoodGroup === 'All' || (item.food_group && item.food_group === selectedFoodGroup);
+    const matchesItemCategory = selectedItemCategory === 'All' || (item.item_category && item.item_category === selectedItemCategory);
     return matchesSearch && matchesFoodGroup && matchesItemCategory;
   });
 
   // Handle category filter changes
-  const handleCategoryChange = (e) => {
-    setSelectedCategory(e.target.value);
+  const handleFoodGroupChange = (e) => {
+    setSelectedFoodGroup(e.target.value);
   };
-  
   const handleItemCategoryChange = (e) => {
     setSelectedItemCategory(e.target.value);
   };
 
-  // Add this function to handle CSV download
-  const downloadCSV = () => {
-    // Convert the data to CSV format using Papa Parse
-    const csv = Papa.unparse(filteredItems.map(item => {
-      const foodInfo = foodCodeMap[item.Foodcode] || {};
-      return {
-        Description: item.Description,
-        ItemCategory: foodInfo.description || 'N/A',
-        FoodGroup: foodInfo.foodgroups || 'N/A',
-        FoodSubgroup: foodInfo.foodsubgroups || 'N/A',
-        FoodCode: item.Foodcode,
-        DocumentYear: item.documentYear || 'N/A',
-        SchoolDistrict: item.schoolName || 'N/A',
-        State: item.state || 'N/A',
-        Price: item.Price,
-        Quantity: item.Quantity,
-        PackSize: item["Pack Size"],
-        Pack: item.Pack,
-        Size: item.Size,
-        UOM: item.UOM,
-        PricePerPack: item["Price Per Pack"],
-        PricePerPackSize: item["Price Per Pack Size"],
-        PricePerLb: item["Price Per Lb"]
-      };
-    }));
-    
-    // Create a Blob with the CSV data
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    
-    // Create a temporary link to trigger the download
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'food_database_export.csv';
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    
-    // Clean up
-    document.body.removeChild(link);
-  };
-
   // Add function to handle navigation to analysis page
   const handleRunQuery = () => {
-    navigate('/analysis');
+    // Send filter parameters to backend API
+    const filterParams = {
+      searchTerm,
+      selectedFoodGroup,
+      selectedItemCategory,
+      yearRange,
+      totalItems: foodItems.length,
+      filteredItems: filteredItems.length,
+      schoolName: "FUHSD"
+    };
+    axios.post('http://localhost:5005/api/filter-query', filterParams)
+      .then(response => {
+        navigate('/analysis');
+      })
+      .catch(error => {
+        navigate('/analysis');
+      });
   };
 
   if (loading) {
@@ -187,7 +97,6 @@ function FoodDatabase() {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -212,85 +121,39 @@ function FoodDatabase() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Food Procurement Database</h1>
-      
       <div className="mb-6 flex flex-wrap justify-between items-end gap-4">
-        {/* Search Bar - Takes more space on the left */}
+        {/* Search Bar */}
         <div className="flex-grow max-w-xl relative">
           <input
             type="text"
             placeholder="Search by description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 
-                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+            className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 \
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 \
                      outline-none transition-colors"
           />
-          <svg 
-            className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-            />
-          </svg>
         </div>
-        
-        {/* Filters Container - Aligned to the right */}
+        {/* Filters */}
         <div className="flex flex-wrap gap-4 justify-end">
-          {/* Year Range Filter */}
-          <div className="w-64">
-            <Form.Group>
-              <Form.Label className="text-sm font-medium text-gray-700">Year Range</Form.Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="2000"
-                  max="2023"
-                  value={yearRange.min}
-                  onChange={(e) => setYearRange({...yearRange, min: parseInt(e.target.value)})}
-                  className="w-24 px-2 py-2 rounded-lg border border-gray-300 
-                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                            outline-none transition-colors"
-                />
-                <span className="text-gray-500">to</span>
-                <input
-                  type="number"
-                  min="2000"
-                  max="2023"
-                  value={yearRange.max}
-                  onChange={(e) => setYearRange({...yearRange, max: parseInt(e.target.value)})}
-                  className="w-24 px-2 py-2 rounded-lg border border-gray-300 
-                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                            outline-none transition-colors"
-                />
-              </div>
-            </Form.Group>
-          </div>
-          
           {/* Food Group Filter */}
           <div className="w-48">
             <Form.Group>
               <Form.Label className="text-sm font-medium text-gray-700">Food Group</Form.Label>
               <Form.Select 
-                value={selectedCategory} 
-                onChange={handleCategoryChange}
-                className="px-4 py-2 rounded-lg border border-gray-300 
-                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                value={selectedFoodGroup} 
+                onChange={handleFoodGroupChange}
+                className="px-4 py-2 rounded-lg border border-gray-300 \
+                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 \
                           outline-none transition-colors"
               >
                 <option value="All">All Food Groups</option>
-                {categories.map((category, index) => (
+                {foodGroups.map((category, index) => (
                   <option key={index} value={category}>{category}</option>
                 ))}
               </Form.Select>
             </Form.Group>
           </div>
-          
           {/* Item Category Filter */}
           <div className="w-48">
             <Form.Group>
@@ -298,8 +161,8 @@ function FoodDatabase() {
               <Form.Select 
                 value={selectedItemCategory} 
                 onChange={handleItemCategoryChange}
-                className="px-4 py-2 rounded-lg border border-gray-300 
-                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                className="px-4 py-2 rounded-lg border border-gray-300 \
+                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 \
                           outline-none transition-colors"
               >
                 <option value="All">All Item Categories</option>
@@ -311,13 +174,11 @@ function FoodDatabase() {
           </div>
         </div>
       </div>
-
       {/* Results count and download button */}
       <div className="mb-4 flex justify-between items-center">
         <div className="text-sm text-gray-600">
           Showing {filteredItems.length} of {foodItems.length} items
         </div>
-        
         <div className="flex gap-2">
           <button
             onClick={handleRunQuery}
@@ -328,19 +189,8 @@ function FoodDatabase() {
             </svg>
             Run Query
           </button>
-
-          <button
-            onClick={downloadCSV}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download CSV
-          </button>
         </div>
       </div>
-
       <div className="bg-white shadow-md rounded-lg overflow-hidden overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -365,32 +215,27 @@ function FoodDatabase() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredItems.map((item) => {
-              // Get food details from the map if available
-              const foodInfo = foodCodeMap[item.Foodcode] || {};
-              
-              return (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">{item.Description}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{foodInfo.description || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{foodInfo.foodgroups || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{foodInfo.foodsubgroups || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.Foodcode}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.documentYear || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.schoolName || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.state || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.Price}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.Quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item["Pack Size"]}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.Pack}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.Size}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.UOM}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item["Price Per Pack"]}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item["Price Per Pack Size"]}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item["Price Per Lb"]}</td>
-                </tr>
-              );
-            })}
+            {filteredItems.map((item) => (
+              <tr key={item.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">{item.Description}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.item_category || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.food_group || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.food_subgroup || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Food_Code}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Document_year || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.School_name || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.State || 'N/A'}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Price}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Quantity}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Pack_size}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Pack}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Size}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.UOM}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Price_per_pack}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Per_per_pack_size}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{item.Price_per_lb}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import supabase from '../misc/supabaseClient';
+import Papa from 'papaparse';
+import foodData from '../data/foodData';
 
 function PriceEdits() {
     const [csvData, setCsvData] = useState([]);
@@ -10,6 +12,7 @@ function PriceEdits() {
     const [schoolName, setSchoolName] = useState('');
     const [documentYear, setDocumentYear] = useState('');
     const [state, setState] = useState('');
+    const [foodCodeMap, setFoodCodeMap] = useState({});
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -24,6 +27,27 @@ function PriceEdits() {
 
     useEffect(() => {
         FetchCsvData();
+        // Parse the food data CSV when component mounts
+        Papa.parse(foodData, {
+            header: true,
+            delimiter: ",",
+            quoteChar: '"',
+            skipEmptyLines: true,
+            complete: (results) => {
+                // Create a map of food codes to their details
+                const foodMap = {};
+                results.data.forEach(item => {
+                    if (item.foodcode) {
+                        foodMap[item.foodcode] = {
+                            description: item.description,
+                            foodgroups: item.foodgroups,
+                            foodsubgroups: item.foodsubgroups
+                        };
+                    }
+                });
+                setFoodCodeMap(foodMap);
+            }
+        });
     }, []);
 
     const FetchCsvData = async () => {
@@ -85,13 +109,15 @@ function PriceEdits() {
             
             // Process each row of CSV data
             const foodItems = csvData.map(row => {
-                // Create an object mapping headers to values
                 const foodItem = headers.reduce((obj, header, index) => {
                     obj[header.trim()] = row[index];
                     return obj;
                 }, {});
-                
-                // Format data according to Supabase schema
+
+                // Look up food code translation
+                const code = (foodItem.Foodcode || foodItem.Food_Code || '').toString().trim();
+                const foodInfo = foodCodeMap[code] || {};
+
                 return {
                     Description: foodItem.Description || '',
                     Pack: parseInt(foodItem.Pack) || 0,
@@ -106,7 +132,10 @@ function PriceEdits() {
                     Document_year: parseInt(documentYear) || new Date().getFullYear(),
                     School_name: schoolName || 'Unknown',
                     State: state || 'Unknown',
-                    Food_Code: parseInt(foodItem.Foodcode) || null,
+                    Food_Code: parseInt(code) || null,
+                    item_category: foodInfo.description || '',
+                    food_group: foodInfo.foodgroups || '',
+                    food_subgroup: foodInfo.foodsubgroups || '',
                     created_at: new Date().toISOString()
                 };
             });
@@ -184,33 +213,45 @@ function PriceEdits() {
                                     {header}
                                 </th>
                             ))}
+                            <th className="border border-gray-300 px-4 py-2 bg-gray-100">Item Category</th>
+                            <th className="border border-gray-300 px-4 py-2 bg-gray-100">Food Group</th>
+                            <th className="border border-gray-300 px-4 py-2 bg-gray-100">Food Subgroup</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {csvData.map((row, rowIndex) => (
-                            <tr key={rowIndex}>
-                                {row.map((cell, colIndex) => (
-                                    <td 
-                                        key={colIndex} 
-                                        className="border border-gray-300 px-4 py-2"
-                                        onClick={() => setEditingCell({ row: rowIndex, col: colIndex })}
-                                    >
-                                        {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                                            <input
-                                                type="text"
-                                                value={cell}
-                                                onChange={(e) => handleCellEdit(rowIndex, colIndex, e.target.value)}
-                                                onBlur={() => setEditingCell(null)}
-                                                autoFocus
-                                                className="w-full p-1"
-                                            />
-                                        ) : (
-                                            cell
-                                        )}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
+                        {csvData.map((row, rowIndex) => {
+                            // Find the index of the Foodcode column
+                            const foodCodeIndex = headers.findIndex(h => h.trim().toLowerCase() === 'foodcode' || h.trim().toLowerCase() === 'food_code');
+                            const code = foodCodeIndex !== -1 ? (row[foodCodeIndex] || '').toString().trim() : '';
+                            const foodInfo = foodCodeMap[code] || {};
+                            return (
+                                <tr key={rowIndex}>
+                                    {row.map((cell, colIndex) => (
+                                        <td 
+                                            key={colIndex} 
+                                            className="border border-gray-300 px-4 py-2"
+                                            onClick={() => setEditingCell({ row: rowIndex, col: colIndex })}
+                                        >
+                                            {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                                                <input
+                                                    type="text"
+                                                    value={cell}
+                                                    onChange={(e) => handleCellEdit(rowIndex, colIndex, e.target.value)}
+                                                    onBlur={() => setEditingCell(null)}
+                                                    autoFocus
+                                                    className="w-full p-1"
+                                                />
+                                            ) : (
+                                                cell
+                                            )}
+                                        </td>
+                                    ))}
+                                    <td className="border border-gray-300 px-4 py-2">{foodInfo.description || 'N/A'}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{foodInfo.foodgroups || 'N/A'}</td>
+                                    <td className="border border-gray-300 px-4 py-2">{foodInfo.foodsubgroups || 'N/A'}</td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

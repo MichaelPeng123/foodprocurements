@@ -5,6 +5,7 @@
   "dependencies": {
     "@shadcn/ui": "^0.0.4",
     "@supabase/supabase-js": "^2.49.4",
+    "axios": "^1.9.0",
     "bootstrap": "^5.3.3",
     "chart.js": "^4.4.8",
     "cra-template": "1.2.0",
