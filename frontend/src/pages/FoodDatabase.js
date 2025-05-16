@@ -4,6 +4,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { createClient } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import foodData from '../data/foodData';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || "https://bbbhdeehblyakaojszzy.supabase.co";
@@ -23,7 +24,7 @@ function FoodDatabase() {
   const [itemCategories, setItemCategories] = useState([]);
   const [selectedItemCategory, setSelectedItemCategory] = useState('All');
   const [foodGroups, setFoodGroups] = useState([]);
-  const [selectedFoodGroup, setSelectedFoodGroup] = useState('All');
+  const [foodSubgroups, setFoodSubgroups] = useState([]);
 
   useEffect(() => {
     const fetchFoodItems = async () => {
@@ -34,34 +35,45 @@ function FoodDatabase() {
           .select('*');
         if (supabaseError) throw supabaseError;
         setFoodItems(data);
-        // Extract unique food groups and item categories from DB data
-        setFoodGroups([
-          ...new Set(data.map(item => item.food_group).filter(Boolean))
-        ]);
-        setItemCategories([
-          ...new Set(data.map(item => item.item_category).filter(Boolean))
-        ]);
         setLoading(false);
       } catch (err) {
         setError("Failed to fetch food items: " + (err.message || "Unknown error"));
         setLoading(false);
       }
     };
+
+    // Extract unique categories from foodData.js for dropdowns
+    const parseCategoriesFromFoodData = () => {
+      const lines = foodData.split('\n');
+      const headers = lines[0].split(',');
+      const foodGroupSet = new Set();
+      const foodSubgroupSet = new Set();
+      for (let i = 1; i < lines.length; i++) {
+        const row = lines[i].split(',');
+        if (row.length < 4) continue;
+        const foodGroup = row[2]?.trim();
+        const foodSubgroup = row[3]?.trim();
+        if (foodGroup) foodGroupSet.add(foodGroup);
+        if (foodSubgroup) foodSubgroupSet.add(foodSubgroup);
+      }
+      setFoodGroups(["All", ...Array.from(foodGroupSet)]);
+      setFoodSubgroups(["All", ...Array.from(foodSubgroupSet)]);
+    };
+
     fetchFoodItems();
+    parseCategoriesFromFoodData();
   }, []);
 
-  // Filter items based on search term and selected categories
+  // Filter items based on search term, item category, and year range
   const filteredItems = foodItems.filter(item => {
     const matchesSearch = item.Description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFoodGroup = selectedFoodGroup === 'All' || (item.food_group && item.food_group === selectedFoodGroup);
     const matchesItemCategory = selectedItemCategory === 'All' || (item.item_category && item.item_category === selectedItemCategory);
-    return matchesSearch && matchesFoodGroup && matchesItemCategory;
+    const year = parseInt(item.Document_year, 10);
+    const matchesYear = !isNaN(year) && year >= yearRange.min && year <= yearRange.max;
+    return matchesSearch && matchesItemCategory && matchesYear;
   });
 
   // Handle category filter changes
-  const handleFoodGroupChange = (e) => {
-    setSelectedFoodGroup(e.target.value);
-  };
   const handleItemCategoryChange = (e) => {
     setSelectedItemCategory(e.target.value);
   };
@@ -70,13 +82,9 @@ function FoodDatabase() {
   const handleRunQuery = () => {
     // Send filter parameters to backend API
     const filterParams = {
-      searchTerm,
-      selectedFoodGroup,
       selectedItemCategory,
       yearRange,
-      totalItems: foodItems.length,
-      filteredItems: filteredItems.length,
-      schoolName: "FUHSD"
+      schoolName: "FUHSD_TEST"
     };
     axios.post('http://localhost:5005/api/filter-query', filterParams)
       .then(response => {
@@ -136,24 +144,6 @@ function FoodDatabase() {
         </div>
         {/* Filters */}
         <div className="flex flex-wrap gap-4 justify-end">
-          {/* Food Group Filter */}
-          <div className="w-48">
-            <Form.Group>
-              <Form.Label className="text-sm font-medium text-gray-700">Food Group</Form.Label>
-              <Form.Select 
-                value={selectedFoodGroup} 
-                onChange={handleFoodGroupChange}
-                className="px-4 py-2 rounded-lg border border-gray-300 \
-                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 \
-                          outline-none transition-colors"
-              >
-                <option value="All">All Food Groups</option>
-                {foodGroups.map((category, index) => (
-                  <option key={index} value={category}>{category}</option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-          </div>
           {/* Item Category Filter */}
           <div className="w-48">
             <Form.Group>
@@ -166,10 +156,36 @@ function FoodDatabase() {
                           outline-none transition-colors"
               >
                 <option value="All">All Item Categories</option>
-                {itemCategories.map((category, index) => (
+                {[...new Set(foodItems.map(item => item.item_category).filter(Boolean))].map((category, index) => (
                   <option key={index} value={category}>{category}</option>
                 ))}
               </Form.Select>
+            </Form.Group>
+          </div>
+          {/* Year Range Filter */}
+          <div className="flex items-end gap-2">
+            <Form.Group>
+              <Form.Label className="text-sm font-medium text-gray-700">Year Min</Form.Label>
+              <Form.Control
+                type="number"
+                min="2010"
+                max={yearRange.max}
+                value={yearRange.min}
+                onChange={e => setYearRange({ ...yearRange, min: Number(e.target.value) })}
+                className="px-2 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              />
+            </Form.Group>
+            <span className="pb-2">to</span>
+            <Form.Group>
+              <Form.Label className="text-sm font-medium text-gray-700">Year Max</Form.Label>
+              <Form.Control
+                type="number"
+                min={yearRange.min}
+                max="2025"
+                value={yearRange.max}
+                onChange={e => setYearRange({ ...yearRange, max: Number(e.target.value) })}
+                className="px-2 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+              />
             </Form.Group>
           </div>
         </div>
