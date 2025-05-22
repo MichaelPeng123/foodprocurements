@@ -88,9 +88,12 @@ function FoodDatabase() {
     };
     axios.post('http://localhost:5005/api/filter-query', filterParams)
       .then(response => {
+        // Store the response data in localStorage
+        localStorage.setItem('analysisData', JSON.stringify(response.data));
         navigate('/analysis');
       })
       .catch(error => {
+        console.error('Error fetching analysis data:', error);
         navigate('/analysis');
       });
   };

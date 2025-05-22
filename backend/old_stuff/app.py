@@ -45,6 +45,48 @@ def test_route():
     print("Hello!")
     return jsonify({"message": "API is working!"})
 
+# New endpoint for receiving filter parameters
+@app.route('/api/filter-query', methods=['POST'])
+def filter_query():
+    # Get filter parameters from request
+    filter_params = request.json
+    
+    # Print filter parameters to console
+    print("Received filter parameters:")
+    print(f"Item Category: {filter_params.get('selectedItemCategory', 'All')}")
+    print(f"Year Range: {filter_params.get('yearRange', {})}")
+    print(f"School Name: {filter_params.get('schoolName', '')}")
+
+    # Extract filter values
+    school_name = filter_params.get('schoolName', '')
+    year_range = filter_params.get('yearRange', {})
+    year_min = year_range.get('min', 2018)
+    year_max = year_range.get('max', 2023)
+    selected_item_category = filter_params.get('selectedItemCategory', 'All')
+
+    # Build Supabase query
+    query = supabase.table('food_data').select('*')
+    if school_name:
+        query = query.eq('School_name', school_name)
+    if selected_item_category and selected_item_category != 'All':
+        query = query.eq('item_category', selected_item_category)
+    query = query.gte('Document_year', year_min).lte('Document_year', year_max)
+
+    # Execute query
+    response = query.execute()
+    items = response.data if hasattr(response, 'data') else response.get('data', [])
+
+    print("Filtered items:")
+    for item in items:
+        print(item)
+
+    # Return the filtered items in the response
+    return jsonify({
+        "status": "success",
+        "message": "Filter parameters received and query executed",
+        "items": items
+    })
+
 # Example POST route
 @app.route('/api/data', methods=['POST'])
 def receive_data():

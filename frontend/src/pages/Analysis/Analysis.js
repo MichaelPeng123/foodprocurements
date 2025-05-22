@@ -1,12 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ItemSummary from './AnalysisComponents/ItemSummary';
 import YourPurchases from './AnalysisComponents/YourPurchases';
 import OtherSFAComparisons from './AnalysisComponents/OtherSFAComparisons';
 import CostAnalysis from './AnalysisComponents/CostAnalysis';
 
 export default function Analysis() {
-  // Item metadata
-  const itemData = {
+  const [analysisData, setAnalysisData] = useState(null);
+  
+  useEffect(() => {
+    // Retrieve data from localStorage
+    const storedData = localStorage.getItem('analysisData');
+    if (storedData) {
+      setAnalysisData(JSON.parse(storedData));
+    }
+  }, []);
+
+  // Item metadata - now uses data from API if available
+  const itemData = analysisData ? {
+    name: analysisData.items?.length > 0 ? analysisData.items[0].item_category : "All Items",
+    category: analysisData.items?.length > 0 ? analysisData.items[0].food_subgroup : "N/A",
+    purchasingVolume: 3,
+    purchasingVolumeValue: analysisData.metrics?.purchasing_volume ? `$${analysisData.metrics.purchasing_volume.toLocaleString()}` : "$24,560",
+    averagePurchasePrice: 2,
+    averagePurchasePriceValue: analysisData.metrics?.avg_purchase_price ? `$${analysisData.metrics.avg_purchase_price.toFixed(2)}/lb` : "$2.45/lb",
+    otherSFAsPriceRating: 3,
+    otherSFAsPriceRange: analysisData.metrics?.other_sfa_max ? 
+      `$${analysisData.metrics.other_sfa_min.toFixed(2)} - $${analysisData.metrics.other_sfa_max.toFixed(2)}/lb` : 
+      "$1.95 - $2.85/lb"
+  } : {
     name: "Fresh Vegetables - Carrots",
     category: "Fresh Produce",
     purchasingVolume: 3,
@@ -17,8 +38,14 @@ export default function Analysis() {
     otherSFAsPriceRange: "$1.95 - $2.85/lb"
   };
   
-  // Your purchases data
-  const yourPurchases = [
+  // Your purchases data - use data from API if available
+  const yourPurchases = analysisData ? analysisData.items.map(item => ({
+    itemDescription: item.Description || 'N/A',
+    year: item.Document_year || 'N/A',
+    quantity: item.Quantity ? `${item.Quantity.toLocaleString()} lbs` : 'N/A',
+    purchaseAmount: item.Price ? `$${item.Price.toLocaleString()}` : 'N/A',
+    pricePerLb: item.Price_per_lb ? `$${item.Price_per_lb}` : 'N/A'
+  })) : [
     { 
       itemDescription: "Organic Carrots", 
       year: 2025, 
@@ -56,15 +83,26 @@ export default function Analysis() {
     }
   ];
   
-  // Your purchase metrics
-  const yourPurchaseMetrics = {
+  // Your purchase metrics - use data from API if available
+  const yourPurchaseMetrics = analysisData ? {
+    avgPurchasePrice: analysisData.metrics?.avg_purchase_price ? `$${analysisData.metrics.avg_purchase_price.toFixed(2)}/lb` : "$2.45/lb",
+    totalVolume: analysisData.metrics?.purchasing_volume ? `$${analysisData.metrics.purchasing_volume.toLocaleString()}` : "$24,560",
+    totalQuantity: analysisData.metrics?.total_quantity ? `${analysisData.metrics.total_quantity.toLocaleString()} lbs` : "10,024 lbs"
+  } : {
     avgPurchasePrice: "$2.45/lb",
     totalVolume: "$24,560",
     totalQuantity: "10,024 lbs"
   };
   
-  // Other SFAs purchases data
-  const otherSFAsPurchases = [
+  // Other SFAs purchases data - use data from API if available
+  const otherSFAsPurchases = analysisData ? analysisData.other_sfa_items.map(item => ({
+    itemDescription: item.Description || 'N/A',
+    year: item.Document_year || 'N/A',
+    quantity: item.Quantity ? `${item.Quantity.toLocaleString()} lbs` : 'N/A',
+    purchaseAmount: item.Price ? `$${item.Price.toLocaleString()}` : 'N/A',
+    pricePerLb: item.Price_per_lb ? `$${item.Price_per_lb}` : 'N/A',
+    schoolName: item.School_name || 'Unknown School'
+  })) : [
     { 
       itemDescription: "Organic Carrots", 
       year: 2025, 
@@ -115,8 +153,31 @@ export default function Analysis() {
     }
   ];
   
+  // Get state from the first other SFA item or default to California
+  const state = analysisData && analysisData.other_sfa_items.length > 0 ? 
+    analysisData.other_sfa_items[0].State || "California" : "California";
+  
   // Cost analysis data
-  const costAnalysisData = {
+  const costAnalysisData = analysisData ? {
+    potentialSavingsAvg: {
+      amount: analysisData.metrics?.potential_savings_avg < 0 ? 
+        `-$${Math.abs(analysisData.metrics.potential_savings_avg).toLocaleString()}` : 
+        `$${analysisData.metrics.potential_savings_avg.toLocaleString()}`,
+      percentage: `-${Math.abs(analysisData.metrics?.potential_savings_avg / analysisData.metrics?.total_school_spend * 100)}% of total food budget`
+    },
+    potentialSavingsBest: {
+      amount: `$${analysisData.metrics?.potential_savings_best.toLocaleString()}`,
+      percentage: `${(analysisData.metrics?.potential_savings_best / analysisData.metrics?.total_school_spend * 100)}% of total food budget`
+    },
+    volumeComparison: {
+      text: "Top 20% in State",
+      percentage: 90 // Default as requested
+    },
+    budgetAllocation: {
+      text: `${(analysisData.metrics?.budget_allocation * 100).toFixed(2)}% of Total Food Budget`,
+      percentage: (analysisData.metrics?.budget_allocation * 100) || 12.5
+    }
+  } : {
     potentialSavingsAvg: {
       amount: "-$4,280",
       percentage: "-8.2% of total food budget"
@@ -145,7 +206,7 @@ export default function Analysis() {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <YourPurchases purchases={yourPurchases} metrics={yourPurchaseMetrics} />
-        <OtherSFAComparisons purchases={otherSFAsPurchases} state="California" />
+        <OtherSFAComparisons purchases={otherSFAsPurchases} state={state} />
       </div>
     </div>
   );

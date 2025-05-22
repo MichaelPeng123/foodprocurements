@@ -11,13 +11,11 @@ export default function CostAnalysis({ data }) {
           <div className="mb-6">
             <p className="text-gray-600 mb-1">Potential Savings (Avg. Market Price)</p>
             <p className="text-red-600 text-3xl font-semibold">{data.potentialSavingsAvg.amount}</p>
-            <p className="text-gray-600">{data.potentialSavingsAvg.percentage}</p>
           </div>
           
           <div>
             <p className="text-gray-600 mb-1">Potential Savings (Best Market Price)</p>
             <p className="text-green-600 text-3xl font-semibold">{data.potentialSavingsBest.amount}</p>
-            <p className="text-gray-600">{data.potentialSavingsBest.percentage}</p>
           </div>
         </div>
         
