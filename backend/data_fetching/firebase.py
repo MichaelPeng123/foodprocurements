@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize Firebase with your service account credentials
-cred = credentials.Certificate('/Users/mpeng/Desktop/Firebase_keys/python_key.json')
+cred = credentials.Certificate('../python_key.json')
 firebase_admin.initialize_app(cred, {
     'storageBucket': os.getenv('REACT_APP_FIREBASE_STORAGE_BUCKET')
 })

@@ -8,6 +8,8 @@ from PIL import Image
 import pytesseract
 from dotenv import load_dotenv
 import concurrent.futures
+import requests
+import tempfile
 
 # Load environment variables
 load_dotenv()
@@ -16,6 +18,32 @@ load_dotenv()
 client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 # ======================= Extraction =======================
+def download_files_from_urls(urls):
+    temp_paths = []
+    for url in urls:
+        response = requests.get(url)
+        if response.status_code == 200:
+            suffix = os.path.splitext(url)[-1]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+                tmp_file.write(response.content)
+                temp_paths.append(tmp_file.name)
+        else:
+            print(f"[ERROR] Failed to download {url}")
+    return temp_paths
+
+def process_batch_from_urls(urls, food_index_path="foodCodes/food_index.txt"):
+    temp_files = download_files_from_urls(urls)
+    print("[DEBUG] Downloaded files:", temp_files)
+
+    csv_chunks = run_parallel_batches(temp_files, food_index_path)
+    print("[DEBUG] CSV chunks:", csv_chunks)
+
+    combined_csv = "\n".join(csv_chunks)
+    print("[DEBUG] Combined CSV:", combined_csv[:50])
+    
+    return combined_csv
+
+
 def extract_text_from_pdf(pdf_path):
     try:
         reader = PdfReader(pdf_path)
@@ -143,29 +171,24 @@ def run_parallel_batches(file_paths, food_index_path, batch_size=1):
     return results
 
 # ======================= Combine CSVs =======================
-def combine_csv_strings(csv_strings, output_path="food_procurement_combined.xlsx"):
-    dfs = []
-    for csv_string in csv_strings:
-        try:
-            buffer = io.StringIO(csv_string)
-            df = pd.read_csv(buffer)
-            dfs.append(df)
-        except Exception as e:
-            print(f"[CSV ERROR] Failed to parse: {e}")
+# def combine_csv_strings(csv_strings, output_path="food_procurement_combined.xlsx"):
+#   dfs = []
+#   for csv_string in csv_strings:
+#    try:
+#        buffer = io.StringIO(csv_string)
+#        df = pd.read_csv(buffer)
+#        dfs.append(df)
+#    except Exception as e:
+#        print(f"[CSV ERROR] Failed to parse: {e}")
 
-    if dfs:
-        combined = pd.concat(dfs, ignore_index=True)
-        combined.to_excel(output_path, index=False)
-        print(f"[DONE] Saved Excel to {output_path}")
-    else:
-        print("[ERROR] No valid data to save.")
+#   if dfs:
+#    combined = pd.concat(dfs, ignore_index=True)
+#    combined.to_excel(output_path, index=False)
+#    print(f"[DONE] Saved Excel to {output_path}")
+#   else:
+#    print("[ERROR] No valid data to save.")
 
 # ======================= Main Runner =======================
-def process_procurement_files(file_paths, food_index_path="backend/foodCodes/food_index.txt", output_excel_path="food_procurement_combined.xlsx"):
-    csv_chunks = run_parallel_batches(file_paths, food_index_path)
-    combine_csv_strings(csv_chunks, output_excel_path)
-
-# ======================= CLI Entry =======================
-if __name__ == "__main__":
-    files = ["image1.png", "image2.png", "image3.png"]
-    process_procurement_files(files)
+# def process_procurement_files(file_paths, food_index_path="backend/foodCodes/food_index.txt", output_excel_path="food_procurement_combined.xlsx"):
+#   csv_chunks = run_parallel_batches(file_paths, food_index_path)
+#    combine_csv_strings(csv_chunks, output_excel_path)

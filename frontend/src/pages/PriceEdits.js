@@ -104,17 +104,33 @@ function PriceEdits() {
     };
 
     const sendToSupabase = async () => {
+        console.log("sendToSupabase CALLED!");
+
+        if (!schoolName || !state || !documentYear) {
+            alert("Please fill in School Name, State, and Year before sending.");
+            return;
+        }
+
         try {
-            setUploading(true);
+            // Check if user is authenticated
+            const { data: { session }, error: authError } = await supabase.auth.getSession();
+            if (authError) throw authError;
             
-            // Process each row of CSV data
+            if (!session) {
+                alert("Please sign in to upload data to the database.");
+                navigate('/signin');
+                return;
+            }
+
+            setUploading(true);
+
+            // Prepare food items based on current table data
             const foodItems = csvData.map(row => {
                 const foodItem = headers.reduce((obj, header, index) => {
                     obj[header.trim()] = row[index];
                     return obj;
                 }, {});
 
-                // Look up food code translation
                 const code = (foodItem.Foodcode || foodItem.Food_Code || '').toString().trim();
                 const foodInfo = foodCodeMap[code] || {};
 
@@ -127,11 +143,11 @@ function PriceEdits() {
                     Per_per_pack_size: parseFloat(foodItem["Price Per Pack Size"]) || 0,
                     Price_per_lb: parseFloat(foodItem["Price Per Lb"]) || 0,
                     Quantity: parseInt(foodItem.Quantity) || 0,
-                    Size: parseInt(foodItem.Size) || 0,
+                    Size: parseFloat(foodItem.Size) || 0,
                     UOM: foodItem.UOM || '',
                     Document_year: parseInt(documentYear) || new Date().getFullYear(),
-                    School_name: schoolName || 'Unknown',
-                    State: state || 'Unknown',
+                    School_name: schoolName,
+                    State: state,
                     Food_Code: parseInt(code) || null,
                     item_category: foodInfo.description || '',
                     food_group: foodInfo.foodgroups || '',
@@ -139,15 +155,21 @@ function PriceEdits() {
                     created_at: new Date().toISOString()
                 };
             });
-            
-            // Insert data into Supabase
+
             const { data, error } = await supabase
                 .from('food_data')
                 .insert(foodItems)
                 .select();
-            
-            if (error) throw error;
-            
+
+            if (error) {
+                if (error.code === '42501') {
+                    alert("You don't have permission to upload data. Please contact your administrator.");
+                } else {
+                    throw error;
+                }
+                return;
+            }
+
             alert(`Successfully uploaded ${data.length} items to the database!`);
             navigate('/food-database');
         } catch (error) {

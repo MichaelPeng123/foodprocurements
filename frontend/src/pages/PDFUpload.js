@@ -3,82 +3,65 @@ import { useNavigate } from 'react-router-dom';
 import supabase from '../misc/supabaseClient';
 
 export default function PdfUpload() {
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [uploadStatus, setUploadStatus] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    if (e.target.files[0]) {
-      setFile(e.target.files[0]);
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files)); // Convert FileList to Array
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!file) {
-      setUploadStatus('Please select a file');
+
+    if (files.length === 0) {
+      setUploadStatus('Please select at least one file');
       return;
     }
 
     try {
       setUploadStatus('Uploading...');
+      const fileUrls = [];
 
-      // Upload PDF to Supabase storage
-      const pdfFileName = `${Date.now()}_${file.name}`;
-      const { data: pdfData, error: pdfError } = await supabase.storage
-        .from('food-documents')
-        .upload(`pdfs/${pdfFileName}`, file);
-      
-      if (pdfError) throw pdfError;
-      
-      // Get public URL for the uploaded PDF
-      const { data: { publicUrl: pdfUrl } } = supabase.storage
-        .from('food-documents')
-        .getPublicUrl(`pdfs/${pdfFileName}`);
-      
-      console.log("PDF URL: ", pdfUrl);
-      
-      // Send to backend for processing
+      // Upload all files (PDFs & images) to Supabase
+      for (const file of files) {
+        const fileName = `${Date.now()}_${file.name}`;
+        const { data: fileData, error: fileError } = await supabase.storage
+          .from('food-documents')
+          .upload(`csvs/${fileName}`, file);
+        if (fileError) throw fileError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('food-documents')
+          .getPublicUrl(`csvs/${fileName}`);
+
+        fileUrls.push(publicUrl);
+      }
+
+      console.log("Uploaded File URLs: ", fileUrls);
+
+      // Send file URLs to backend for processing
       const response = await fetch('http://localhost:5005/process-pdf', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 'pdf_url': pdfUrl }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_urls: fileUrls }),
       });
-      
+
       const data = await response.json();
-      console.log("Response: ", data);
+      console.log("Backend Response: ", data);
 
-      if (data.csv_content) {
-        // Create a blob from the CSV content
-        const csvBlob = new Blob([data.csv_content], { type: 'text/csv' });
-        
-        // Upload CSV to Supabase Storage
-        const csvFileName = pdfFileName.replace('.pdf', '.csv');
-        const { data: csvData, error: csvError } = await supabase.storage
-          .from('food-documents')
-          .upload(`csvs/${csvFileName}`, csvBlob);
-        
-        if (csvError) throw csvError;
-        
-        // Get public URL for the CSV
-        const { data: { publicUrl: csvUrl } } = supabase.storage
-          .from('food-documents')
-          .getPublicUrl(`csvs/${csvFileName}`);
-        
-        // Navigate to PriceEdits with the CSV download URL
-        navigate('/priceEdits', { 
-          state: { csvUrl: csvUrl, csvFileName: csvFileName }
+      if (data.status === 'success') {
+        navigate('/priceEdits', {
+          state: { csvFileName: data.csvFileName, csvUrl: data.csvUrl }
         });
-      }
-      else {
-        setUploadStatus('Upload failed: ' + data.message);
+        setUploadStatus('Upload and processing successful!');
+      } else {
+        setUploadStatus('Processing failed: ' + (data.message || 'Unknown error'));
       }
 
-      setUploadStatus('Upload successful!');
     } catch (error) {
       console.error('Error:', error);
       setUploadStatus('Upload failed: ' + error.message);
@@ -87,37 +70,40 @@ export default function PdfUpload() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="font-sans text-2xl font-medium text-gray-800 mb-8 tracking-tight">Upload PDF Document</h1>
+      <h1 className="font-sans text-2xl font-medium text-gray-800 mb-8 tracking-tight">Upload PDF and Image Files</h1>
       <div className="bg-white p-8 rounded-lg shadow-sm max-w-2xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div 
             className={`border-2 border-dashed rounded-lg p-8 text-center
               ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
-              ${file ? 'bg-green-50 border-green-500' : ''}`}
+              ${files.length > 0 ? 'bg-green-50 border-green-500' : ''}`}
           >
             <input
               type="file"
-              accept=".pdf"
+              accept=".pdf,.jpg,.jpeg,.png,.bmp,.tiff"
+              multiple
               onChange={handleChange}
               className="hidden"
-              id="pdf-upload"
+              id="file-upload"
             />
             <label
-              htmlFor="pdf-upload"
+              htmlFor="file-upload"
               className="font-sans text-gray-600 cursor-pointer hover:text-blue-600 transition-colors"
             >
-              {file ? file.name : 'Drop your PDF here or click to upload'}
+              {files.length > 0 
+                ? `${files.length} file(s) selected` 
+                : 'Drop your PDFs or Images here or click to upload'}
             </label>
           </div>
           <button
             type="submit"
-            disabled={!file}
+            disabled={files.length === 0}
             className={`w-full py-3 px-4 rounded font-medium transition-colors
-              ${file 
+              ${files.length > 0 
                 ? 'bg-blue-500 text-white hover:bg-blue-600' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
           >
-            Process Document
+            Process Documents
           </button>
         </form>
         {uploadStatus && (
