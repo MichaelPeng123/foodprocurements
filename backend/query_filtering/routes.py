@@ -112,3 +112,55 @@ def filter_query():
         "other_sfa_items": other_sfa_items,
         "metrics": metrics
     }) 
+
+@query_filtering_bp.route('/api/purchase-analytics-query', methods=['POST'])
+def purchase_analytics_query():
+    filter_params = request.json
+    print("Received filter parameters:")
+
+    query = supabase.table("food_data").select("Price,Quantity,item_category").eq("School_name", "FUHSD_TEST")
+    result = query.execute()
+    print("Query executed, processing results")
+    
+    # Dictionary to store category totals
+    category_totals = {}
+    
+    # Access data attribute directly on the APIResponse object
+    if hasattr(result, 'data'):
+        # Process the data and aggregate by category
+        for row in result.data:
+            category = row.get('item_category', 'Uncategorized')
+            price = float(row.get('Price', 0) or 0)
+            quantity = float(row.get('Quantity', 0) or 0)
+            
+            # Calculate volume for this item
+            volume = price * quantity
+            
+            # Add to category total
+            if category in category_totals:
+                category_totals[category] += volume
+            else:
+                category_totals[category] = volume
+        
+        # Print the results in the requested format
+        print("\nTotal Purchasing Volume by Category:")
+        print("====================================")
+        
+        # Sort by volume (highest first)
+        sorted_categories = sorted(category_totals.items(), key=lambda x: x[1], reverse=True)
+        
+        for category, volume in sorted_categories:
+            print(f"{category} -- ${volume:,.2f}")
+        
+    else:
+        print("No data returned or unexpected response format")
+    
+    return jsonify({
+        "status": "success",
+        "message": "Analytics query executed successfully",
+        "category_totals": {k: round(v, 2) for k, v in category_totals.items()}
+    })
+
+
+
+
