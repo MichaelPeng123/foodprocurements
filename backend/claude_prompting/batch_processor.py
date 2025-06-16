@@ -43,7 +43,6 @@ def process_batch_from_urls(urls, food_index_path="foodCodes/food_index.txt"):
     
     return combined_csv
 
-
 def extract_text_from_pdf(pdf_path):
     try:
         reader = PdfReader(pdf_path)
@@ -69,8 +68,8 @@ def extract_text(file_path):
         print(f"[SKIPPED] Unsupported file type: {file_path}")
         return ""
 
-# ======================= Claude Prompt + API =======================
-def get_prompt(text_chunk, food_index):
+# ======================= Batch Processing Claude Prompt + API =======================
+def batch_process_prompt(text_chunk, food_index):
     return f"""Parse the following food procurement text and output a CSV with these headers (DO NOT ADD ANY OF YOUR OWN):
 
     Description,Price,Quantity,Pack Size,Pack,Size,UOM,Total Price,Price Per Pack,Price Per Pack Size,Price Per Pound,Foodcode
@@ -118,9 +117,9 @@ def get_prompt(text_chunk, food_index):
     {text_chunk}
     """
 
-def call_claude(text_chunk, food_index):
+def call_claude_batch_process(text_chunk, food_index):
     try:
-        prompt = get_prompt(text_chunk, food_index)
+        prompt = batch_process_prompt(text_chunk, food_index)
         response = client.messages.create(
             model="claude-3-7-sonnet-20250219",
             max_tokens=20000,
@@ -131,11 +130,19 @@ def call_claude(text_chunk, food_index):
     except Exception as e:
         print(f"Claude API error: {e}")
         return ""
+    
+def batch_process_prompt(text_chunk):
+    return f""" When given the following input chunk, 
+
+
+    Input chunk:
+    {text_chunk}
+    """
 
 # ======================= Batch Handler =======================
 def process_batch(file_paths, food_index):
     combined_text = "\n\n".join(extract_text(path) for path in file_paths)
-    raw_csv = call_claude(combined_text, food_index)
+    raw_csv = call_claude_batch_process(combined_text, food_index)
 
     if not raw_csv.strip():
         print("[WARNING] Claude output is empty for:", file_paths)
