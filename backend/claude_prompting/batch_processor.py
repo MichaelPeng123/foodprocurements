@@ -58,6 +58,11 @@ def extract_text(file_path):
         print(f"[SKIPPED] Unsupported file type: {file_path}")
         return ""
 
+   # - Total Price: Price × Quantity (1 decimal place)
+   # - Price Per Pack: Price ÷ Pack (1 decimal place)
+   # - Price Per Pack Size: Price ÷ (Pack × Size) (1 decimal place)
+   # - Price Per Pound: Random value between 2-15 (1 decimal place)
+
 # ======================= Enhanced Prompting =======================
 def batch_process_prompt(text_chunk, food_index, header_context=None, is_continuation=False):
     """Enhanced prompt that includes header context for continuation chunks"""
@@ -84,20 +89,16 @@ Continue processing items in the same format as established in the first chunk.
 {context_section}
 
 CRITICAL REQUIREMENTS:
-1. Output EXACTLY these 12 headers (copy exactly): Description,Price,Quantity,Pack Size,Pack,Size,UOM,Total Price,Price Per Pack,Price Per Pack Size,Price Per Pound,Foodcode
+1. Output EXACTLY these 8 headers (copy exactly): Description,Price,Quantity,Pack Size,Pack,Size,UOM,Foodcode
 
-2. COLUMN DEFINITIONS (follow precisely and MAKE SURE ALL 12 COLUMNS ARE HERE):
+2. COLUMN DEFINITIONS (follow precisely and MAKE SURE ALL 8 COLUMNS ARE HERE):
    - Description: Food item name (no quotes, clean text)
-   - Price: Price per unit/quantity purchased (numeric, 1 decimal place)
+   - Price: Price per unit of quantity purchased (numeric, 1 decimal place)
    - Quantity: Number of units purchased (whole number)
    - Pack Size: Original pack size text (e.g., "12/16OZ", "6/2LB")
    - Pack: First number from Pack Size (whole number, e.g., 12 from "12/16OZ")
    - Size: Second number from Pack Size (whole number, e.g., 16 from "12/16OZ") 
    - UOM: Unit of measure (OZ, LB, CT, EA, etc.)
-   - Total Price: Price × Quantity (1 decimal place)
-   - Price Per Pack: Price ÷ Pack (1 decimal place)
-   - Price Per Pack Size: Price ÷ (Pack × Size) (1 decimal place)
-   - Price Per Pound: Random value between 2-15 (1 decimal place)
    - Foodcode: 6-digit code from food index (EXACT match required)
 
 3. STRICT FORMATTING RULES:
@@ -864,7 +865,7 @@ def fix_header_column_mismatch(csv_content):
     return '\n'.join(fixed_lines), fix_description
 
 # ======================= Main Function =======================
-def process_batch_from_urls(urls, food_index_path="foodCodes/food_index.txt", max_workers=4, batch_size=1):
+def process_batch_from_urls(urls, food_index_path="foodCodes/food_index.txt", batch_size=1):
     """Main processing function with all features unified"""
     temp_files = download_files_from_urls(urls)
     print(f"[DEBUG] Downloaded files: {temp_files}")
