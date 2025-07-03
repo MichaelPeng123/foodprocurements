@@ -12,6 +12,7 @@ import requests
 import tempfile
 import re
 from typing import Dict, List, Any
+import numpy as np
 
 # Load environment variables
 load_dotenv()
@@ -57,11 +58,6 @@ def extract_text(file_path):
     else:
         print(f"[SKIPPED] Unsupported file type: {file_path}")
         return ""
-
-   # - Total Price: Price × Quantity (1 decimal place)
-   # - Price Per Pack: Price ÷ Pack (1 decimal place)
-   # - Price Per Pack Size: Price ÷ (Pack × Size) (1 decimal place)
-   # - Price Per Pound: Random value between 2-15 (1 decimal place)
 
 # ======================= Enhanced Prompting =======================
 def batch_process_prompt(text_chunk, food_index, header_context=None, is_continuation=False):
@@ -123,7 +119,7 @@ CRITICAL REQUIREMENTS:
 5. QUALITY CONTROLS:
    - Include EVERY single item line from input
    - Do not summarize, group, or skip similar items
-   - Each output row must have exactly 12 columns
+   - Each output row must have exactly 8 columns
    - Verify calculations are correct
 
 {continuation_note}
@@ -219,7 +215,7 @@ def perform_basic_validation(csv_output, original_text):
         errors.append('Output too short - missing data rows')
     
     # Check column count consistency
-    expected_columns = 12
+    expected_columns = 8
     header_cols = len(lines[0].split(',')) if lines else 0
     
     # DEBUG: Print first 5 rows when validation fails
@@ -396,9 +392,9 @@ def post_process_csv(raw_csv):
         
         # Ensure exactly 12 columns
         cols = line.split(',')
-        if len(cols) < 12:
-            cols.extend([''] * (12 - len(cols)))  # Pad with empty strings
-        elif len(cols) > 12:
+        if len(cols) < 8:
+            cols.extend([''] * (8 - len(cols)))  # Pad with empty strings
+        elif len(cols) > 8:
             # Try to merge excess columns into description
             if i > 0:  # Not header
                 cols = [','.join(cols[:len(cols)-11])] + cols[-11:]
@@ -445,7 +441,7 @@ def post_process_csv(raw_csv):
                 }
                 cols[6] = uom_mapping.get(uom, uom)
         
-        cleaned_lines.append(','.join(cols[:12]))
+        cleaned_lines.append(','.join(cols[:8]))
     
     return '\n'.join(cleaned_lines)
 
@@ -587,7 +583,7 @@ def process_batch_unified(file_paths, food_index):
     
     if cleaned_csv:
         final_csv, fix_description = fix_header_column_mismatch(cleaned_csv)
-        if fix_description != "No fix needed - header and data both have 12 columns":
+        if fix_description != "No fix needed - header and data both have 8 columns":
             print(f"[DEBUG] Applied header fix: {fix_description}")
             cleaned_csv = final_csv
     
@@ -640,6 +636,60 @@ def run_parallel_batches(file_paths, food_index_path, batch_size=1):
 
     print(f"[INFO] Parallel processing complete. {len(results)} successful results out of {len(futures)} tasks.")
     return results
+
+def post_processing_additional_information(csv_content: str) -> pd.DataFrame:
+    """Add the last few columns
+       - Total Price: Price × Quantity (1 decimal place)
+       - Price Per Pack: Price ÷ Pack (1 decimal place)
+       - Price Per Pack Size: Price ÷ (Pack × Size) (1 decimal place)
+       - Price Per Pound: Random value between 2-15 (1 decimal place)
+    """ 
+
+    if not csv_content.strip():
+        return pd.DataFrame()
+    try:
+        df = pd.read_csv(io.StringIO(csv_content))
+        for col in ['Price', 'Quantity', 'Pack', 'Size']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # --- Calculate the new columns ---
+
+        # 1. Total Price
+        df['Total Price'] = (df['Price'] * df['Quantity']).round(1)
+
+        # 2. Price Per Pack (handle division by zero)
+        df['Price Per Pack'] = np.where(
+            df['Pack'] > 0, 
+            (df['Price'] / df['Pack']).round(1), 
+            np.nan
+        )
+
+        # 3. Price Per Pack Size (handle division by zero)
+        pack_size_product = df['Pack'] * df['Size']
+        df['Price Per Pack Size'] = np.where(
+            pack_size_product > 0,
+            (df['Price'] / pack_size_product).round(1),
+            np.nan
+        )
+        
+        # 4. Price Per Pound (random value)
+        df['Price Per Pound'] = np.random.uniform(2.0, 15.0, size=len(df)).round(1)
+
+        # Reorder columns to the final 12-column format
+        final_columns = [
+            'Description', 'Price', 'Quantity', 'Pack Size', 'Pack', 'Size', 'UOM', 
+            'Total Price', 'Price Per Pack', 'Price Per Pack Size', 'Price Per Pound', 'Foodcode'
+        ]
+        # Ensure all expected columns exist, filling missing ones with NaN
+        for col in final_columns:
+            if col not in df.columns:
+                 df[col] = np.nan
+        
+        return df[final_columns]
+
+    except Exception as e:
+        print(f"[POST-PROCESSING ERROR] Failed to add columns: {e}")
+        return pd.DataFrame()
 
 # ======================= Quality Assurance =======================
 def comprehensive_quality_check(csv_content: str, original_files: List[str]) -> Dict[str, Any]:
@@ -865,6 +915,8 @@ def fix_header_column_mismatch(csv_content):
     return '\n'.join(fixed_lines), fix_description
 
 # ======================= Main Function =======================
+# ASSUMPTION: auto_fix_common_issues is changed to -> def auto_fix_common_issues(df: pd.DataFrame) -> pd.DataFrame:
+
 def process_batch_from_urls(urls, food_index_path="foodCodes/food_index.txt", batch_size=1):
     """Main processing function with all features unified"""
     temp_files = download_files_from_urls(urls)
@@ -876,14 +928,27 @@ def process_batch_from_urls(urls, food_index_path="foodCodes/food_index.txt", ba
         return ""
     
     combined_csv = combine_csv_chunks_safely(csv_chunks)
-    fixed_csv = auto_fix_common_issues(combined_csv)
     
-    if fixed_csv:
-        final_csv, fix_description = fix_header_column_mismatch(fixed_csv)
-        if fix_description != "No fix needed - header and data both have 12 columns":
-            print(f"[DEBUG] Final header fix applied: {fix_description}")
-            fixed_csv = final_csv
+    # 1. Get the initial DataFrame
+    processed_df = post_processing_additional_information(combined_csv)
+
+    if processed_df.empty:
+        print("[ERROR] Post-processing failed to generate data.")
+        return ""
     
+    # 2. Apply fixes directly to the DataFrame (MORE EFFICIENT)
+    fixed_df = auto_fix_common_issues(processed_df)
+    
+    # 3. Convert to a CSV string ONCE, after all DataFrame fixes are done
+    final_csv = fixed_df.to_csv(index=False, float_format='%.1f')
+    
+    # 4. Apply any final STRING-based fixes if necessary
+    # Note: fix_header_column_mismatch works on strings, so this is the correct place for it.
+    fixed_csv, fix_description = fix_header_column_mismatch(final_csv)
+    if fix_description != "No fix needed - header and data both have 12 columns":
+        print(f"[DEBUG] Final header fix applied: {fix_description}")
+    
+    # 5. Run final checks
     quality_report = comprehensive_quality_check(fixed_csv, temp_files)
     
     print(f"[QUALITY CHECK] Status: {quality_report['status']}")
@@ -899,12 +964,8 @@ def process_batch_from_urls(urls, food_index_path="foodCodes/food_index.txt", ba
     
     return fixed_csv
 
-def auto_fix_common_issues(csv_content: str) -> str:
+def auto_fix_common_issues(df: pd.DataFrame) -> pd.DataFrame:
     """Automatically fix common data quality issues with proper decimal formatting"""
-    try:
-        df = pd.read_csv(io.StringIO(csv_content))
-    except:
-        return csv_content
     
     expected_columns = ['Description', 'Price', 'Quantity', 'Pack Size', 'Pack', 
                        'Size', 'UOM', 'Total Price', 'Price Per Pack', 
@@ -943,4 +1004,4 @@ def auto_fix_common_issues(csv_content: str) -> str:
         if col in df.columns:
             df[col] = df[col].round(1)
     
-    return df.to_csv(index=False, float_format='%.1f')
+    return df
