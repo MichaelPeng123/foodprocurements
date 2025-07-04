@@ -13,3 +13,4 @@ pandas==2.2.2
 Pillow==10.3.0
 pytesseract==0.3.10
 numpy==2.2.6
+gotrue==2.5.4

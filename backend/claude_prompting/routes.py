@@ -6,7 +6,7 @@ from data_fetching.supabase import supabase
 
 claude_prompting_bp = Blueprint('claude_prompting', __name__)
 
-@claude_prompting_bp.route('/process-pdf', methods=['POST'])
+@claude_prompting_bp.route('/process-documents', methods=['POST'])
 def process_pdf():
     try:
         data = request.json

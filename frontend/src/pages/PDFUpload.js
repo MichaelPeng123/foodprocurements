@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import supabase from '../misc/supabaseClient';
 
-export default function PdfUpload() {
+export default function DocumentUpload() {
   const [files, setFiles] = useState([]);
   const [uploadStatus, setUploadStatus] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    if (e.target.files) {
-      setFiles(Array.from(e.target.files)); // Convert FileList to Array
+  const handleFileChange = (e) => {
+    const selectedFiles = e.target.files || e.dataTransfer.files;
+    if (selectedFiles) {
+      setFiles(Array.from(selectedFiles));
     }
   };
 
@@ -26,25 +27,23 @@ export default function PdfUpload() {
       setUploadStatus('Uploading...');
       const fileUrls = [];
 
-      // Upload all files (PDFs & images) to Supabase
       for (const file of files) {
         const fileName = `${Date.now()}_${file.name}`;
         const { data: fileData, error: fileError } = await supabase.storage
           .from('food-documents')
-          .upload(`csvs/${fileName}`, file);
+          .upload(`user-uploads/${fileName}`, file);
         if (fileError) throw fileError;
 
         const { data: { publicUrl } } = supabase.storage
           .from('food-documents')
-          .getPublicUrl(`csvs/${fileName}`);
+          .getPublicUrl(`user-uploads/${fileName}`);
 
         fileUrls.push(publicUrl);
       }
 
       console.log("Uploaded File URLs: ", fileUrls);
 
-      // Send file URLs to backend for processing
-      const response = await fetch('http://localhost:5005/process-pdf', {
+      const response = await fetch('http://localhost:5005/process-documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file_urls: fileUrls }),
@@ -53,7 +52,7 @@ export default function PdfUpload() {
       const data = await response.json();
       console.log("Backend Response: ", data);
 
-      if (data.status === 'success') {
+      if (response.ok && data.status === 'success') {
         navigate('/priceEdits', {
           state: { csvFileName: data.csvFileName, csvUrl: data.csvUrl }
         });
@@ -67,32 +66,53 @@ export default function PdfUpload() {
       setUploadStatus('Upload failed: ' + error.message);
     }
   };
+  
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileChange(e);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="font-sans text-2xl font-medium text-gray-800 mb-8 tracking-tight">Upload PDF and Image Files</h1>
+      <h1 className="font-sans text-2xl font-medium text-gray-800 mb-8 tracking-tight">Upload Your Documents</h1>
       <div className="bg-white p-8 rounded-lg shadow-sm max-w-2xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div 
-            className={`border-2 border-dashed rounded-lg p-8 text-center
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors
               ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
               ${files.length > 0 ? 'bg-green-50 border-green-500' : ''}`}
           >
             <input
               type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.bmp,.tiff"
+              // ✨ Accept .xlsx and .xls files
+              accept=".pdf,.jpg,.jpeg,.png,.bmp,.tiff,.csv,.xlsx,.xls"
               multiple
-              onChange={handleChange}
+              onChange={handleFileChange}
               className="hidden"
               id="file-upload"
             />
             <label
               htmlFor="file-upload"
-              className="font-sans text-gray-600 cursor-pointer hover:text-blue-600 transition-colors"
+              className="font-sans text-gray-600 cursor-pointer hover:text-blue-600"
             >
               {files.length > 0 
                 ? `${files.length} file(s) selected` 
-                : 'Drop your PDFs or Images here or click to upload'}
+                // ✨ Updated label text for Excel
+                : 'Drop PDFs, Images, CSVs, or Excel files here'}
             </label>
           </div>
           <button
@@ -107,12 +127,12 @@ export default function PdfUpload() {
           </button>
         </form>
         {uploadStatus && (
-          <div className={`mt-6 p-4 rounded font-medium
+          <div className={`mt-6 p-4 rounded font-medium text-sm
             ${uploadStatus.includes('successful') 
-              ? 'bg-green-50 text-green-600' 
-              : uploadStatus === 'Uploading...'
-                ? 'bg-blue-50 text-blue-600'
-                : 'bg-red-50 text-red-600'}`}
+              ? 'bg-green-50 text-green-700' 
+              : uploadStatus.includes('Uploading')
+                ? 'bg-blue-50 text-blue-700'
+                : 'bg-red-50 text-red-700'}`}
           >
             {uploadStatus}
           </div>

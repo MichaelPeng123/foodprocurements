@@ -50,11 +50,130 @@ def extract_text_from_image(image_path):
         print(f"[IMG ERROR] Failed to extract from {image_path}: {e}")
         return ""
 
+def extract_text_from_csv(csv_path):
+    """Extracts content from a CSV file and formats it as a string."""
+    try:
+        df = pd.read_csv(csv_path)
+        # Convert the DataFrame to a string, which can be processed by the LLM
+        # This simple conversion works well for getting the raw text content
+        return df.to_string(index=False)
+    except Exception as e:
+        print(f"[CSV ERROR] Failed to extract from {csv_path}: {e}")
+        return ""
+    
+def extract_text_from_excel(excel_path):
+    """Extracts content from all sheets of an Excel file and formats it as a string."""
+    try:
+        # Read the Excel file with proper error handling
+        excel_file = pd.ExcelFile(excel_path, engine='openpyxl')
+        full_text = []
+        
+        # Get sheet names safely
+        sheet_names = excel_file.sheet_names
+        print(f"[DEBUG] Found {len(sheet_names)} sheets in Excel file")
+        
+        # Loop through all sheets in the Excel file
+        for sheet_name in sheet_names:
+            try:
+                print(f"[DEBUG] Processing sheet: {sheet_name}")
+                df = pd.read_excel(excel_file, sheet_name=sheet_name, engine='openpyxl')
+                
+                # Check if the dataframe is empty
+                if df.empty:
+                    print(f"[DEBUG] Sheet '{sheet_name}' is empty, skipping")
+                    continue
+                
+                # Convert the DataFrame to string with proper handling
+                sheet_content = df.to_string(index=False, na_rep='')
+                
+                # Add sheet name as a header for context, then the content
+                full_text.append(f"Sheet: {sheet_name}\n{sheet_content}")
+                print(f"[DEBUG] Successfully processed sheet '{sheet_name}' with {len(df)} rows")
+                
+            except Exception as sheet_error:
+                print(f"[SHEET ERROR] Failed to process sheet '{sheet_name}': {sheet_error}")
+                continue
+        
+        # Close the Excel file
+        excel_file.close()
+        
+        if not full_text:
+            print("[WARNING] No data extracted from any sheets")
+            return ""
+        
+        result = "\n\n".join(full_text)
+        print(f"[DEBUG] Total extracted text length: {len(result)} characters")
+        return result
+        
+    except Exception as e:
+        print(f"[EXCEL ERROR] Failed to extract from {excel_path}: {e}")
+        print(f"[EXCEL ERROR] Error type: {type(e).__name__}")
+        return ""
+
+# Alternative extraction method using openpyxl directly
+def extract_text_from_excel_alternative(excel_path):
+    """Alternative Excel extraction using openpyxl directly for better error handling."""
+    try:
+        from openpyxl import load_workbook
+        
+        # Load workbook
+        wb = load_workbook(excel_path, read_only=True, data_only=True)
+        full_text = []
+        
+        print(f"[DEBUG] Found {len(wb.sheetnames)} sheets using openpyxl")
+        
+        for sheet_name in wb.sheetnames:
+            try:
+                ws = wb[sheet_name]
+                sheet_data = []
+                
+                # Get all rows with data
+                for row in ws.iter_rows(values_only=True):
+                    # Filter out completely empty rows
+                    if any(cell is not None and str(cell).strip() != '' for cell in row):
+                        # Convert None values to empty strings and join with tabs
+                        row_data = '\t'.join(str(cell) if cell is not None else '' for cell in row)
+                        sheet_data.append(row_data)
+                
+                if sheet_data:
+                    sheet_content = '\n'.join(sheet_data)
+                    full_text.append(f"Sheet: {sheet_name}\n{sheet_content}")
+                    print(f"[DEBUG] Processed sheet '{sheet_name}' with {len(sheet_data)} rows")
+                
+            except Exception as sheet_error:
+                print(f"[SHEET ERROR] Failed to process sheet '{sheet_name}': {sheet_error}")
+                continue
+        
+        wb.close()
+        
+        if not full_text:
+            print("[WARNING] No data extracted from any sheets")
+            return ""
+        
+        result = "\n\n".join(full_text)
+        print(f"[DEBUG] Total extracted text length: {len(result)} characters")
+        return result
+        
+    except Exception as e:
+        print(f"[EXCEL ERROR] Alternative extraction failed for {excel_path}: {e}")
+        return ""
+
+# Updated main extract_text function
 def extract_text(file_path):
+    """Updated extract_text function with better Excel handling."""
     if file_path.lower().endswith('.pdf'):
         return extract_text_from_pdf(file_path)
     elif file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff')):
         return extract_text_from_image(file_path)
+    elif file_path.lower().endswith('.csv'):
+        return extract_text_from_csv(file_path)
+    elif file_path.lower().endswith(('.xlsx', '.xls')):
+        # Try the main method first, then fallback to alternative
+        result = extract_text_from_excel(file_path)
+        if not result:
+            print("[DEBUG] Main Excel extraction failed, trying alternative method...")
+            result = extract_text_from_excel_alternative(file_path)
+        return result
     else:
         print(f"[SKIPPED] Unsupported file type: {file_path}")
         return ""
@@ -76,7 +195,7 @@ Use this context to understand the column structure and data format expectations
     continuation_note = ""
     if is_continuation:
         continuation_note = """
-NOTE: This is a continuation chunk from a larger document. The header context above shows the original column structure. 
+NOTE: This is a continuation chunk from a larger document. The header context above shows the original column structure.
 Continue processing items in the same format as established in the first chunk.
 """
 
@@ -93,7 +212,7 @@ CRITICAL REQUIREMENTS:
    - Quantity: Number of units purchased (whole number)
    - Pack Size: Original pack size text (e.g., "12/16OZ", "6/2LB")
    - Pack: First number from Pack Size (whole number, e.g., 12 from "12/16OZ")
-   - Size: Second number from Pack Size (whole number, e.g., 16 from "12/16OZ") 
+   - Size: Second number from Pack Size (whole number, e.g., 16 from "12/16OZ")
    - UOM: Unit of measure (OZ, LB, CT, EA, etc.)
    - Foodcode: 6-digit code from food index (EXACT match required)
 
@@ -111,7 +230,7 @@ CRITICAL REQUIREMENTS:
    - Do NOT default to generic codes like 110024 (Dry Beans)
    - Examples of proper matching:
      * "Chicken Breast" → find poultry/chicken codes
-     * "Apples" → find fruit codes  
+     * "Apples" → find fruit codes
      * "Milk" → find dairy codes
      * "Bread" → find grain/bakery codes
    - If no close match exists, use 999999 (Unknown)
@@ -377,62 +496,61 @@ def estimate_item_count(text):
     return max(potential_items, len(lines) // 3)  # Conservative estimate
 
 def post_process_csv(raw_csv):
-    """Clean up common CSV formatting issues"""
+    """Clean up common CSV formatting issues from the initial 8-column AI output."""
+    if not raw_csv.strip():
+        return ""
+    
     lines = raw_csv.strip().split('\n')
     cleaned_lines = []
     
+    # Process each line of the raw CSV output
     for i, line in enumerate(lines):
         if not line.strip():
             continue
             
-        # Fix common issues
-        line = line.replace('$', '')  # Remove dollar signs
-        line = re.sub(r'""', '', line)  # Remove double quotes
-        line = re.sub(r',\s*,', ',,', line)  # Fix spacing issues
+        # Fix common formatting issues
+        line = line.replace('$', '')
+        line = re.sub(r'""', '', line)
+        line = re.sub(r',\s*,', ',,', line)
         
-        # Ensure exactly 12 columns
         cols = line.split(',')
-        if len(cols) < 8:
-            cols.extend([''] * (8 - len(cols)))  # Pad with empty strings
-        elif len(cols) > 8:
-            # Try to merge excess columns into description
-            if i > 0:  # Not header
-                cols = [','.join(cols[:len(cols)-11])] + cols[-11:]
         
-        # Format decimal columns to 1 decimal place (skip header row)
-        if i > 0:  # Not header row
-            decimal_columns = {1, 7, 8, 9, 10}  # Price, Total Price, Price Per Pack, Price Per Pack Size, Price Per Pound
-            
-            for col_idx in decimal_columns:
-                if col_idx < len(cols) and cols[col_idx].strip():
-                    try:
-                        value = float(cols[col_idx].strip())
-                        cols[col_idx] = f"{value:.1f}"
-                    except ValueError:
-                        pass
-            
-            # Clean Description (column 0)
+        # If a line has more than 8 columns (e.g., a comma in the description)
+        if len(cols) > 8:
+            # The Description is everything EXCEPT the last 7 data columns.
+            num_data_columns = 7 
+            description = ','.join(cols[:-num_data_columns])
+            data_cols = cols[-num_data_columns:]
+            cols = [description] + data_cols
+
+        # Ensure we always have exactly 8 columns, padding with empty strings if needed
+        while len(cols) < 8:
+            cols.append('')
+
+        # --- Process data rows (skip the header) ---
+        if i > 0:
+            # Clean Description (column 0) by removing quotes
             if len(cols) > 0:
                 cols[0] = cols[0].strip().replace('"', '').replace("'", "")
+
+            # Format Price (column 1) to 1 decimal place
+            if len(cols) > 1 and cols[1].strip():
+                try:
+                    cols[1] = f"{float(cols[1].strip()):.1f}"
+                except (ValueError, TypeError):
+                    pass # Keep original value if conversion fails
             
-            # Ensure Pack, Size, Quantity are integers
-            for int_col_idx in [2, 4, 5]:  # Quantity, Pack, Size
+            # Ensure Quantity, Pack, and Size (columns 2, 4, 5) are integers
+            for int_col_idx in [2, 4, 5]:
                 if int_col_idx < len(cols) and cols[int_col_idx].strip():
                     try:
+                        # Convert to float first, then to int, to handle cases like "10.0"
                         value = float(cols[int_col_idx].strip())
                         cols[int_col_idx] = str(int(value))
-                    except ValueError:
-                        pass
+                    except (ValueError, TypeError):
+                        pass # Keep original value if conversion fails
             
-            # Ensure Foodcode is 6-digit integer
-            if len(cols) > 11 and cols[11].strip():
-                try:
-                    value = str(int(float(cols[11].strip())))
-                    cols[11] = value.zfill(6) if len(value) < 6 else value
-                except ValueError:
-                    pass
-            
-            # Standardize UOM
+            # Standardize UOM (column 6)
             if len(cols) > 6 and cols[6].strip():
                 uom = cols[6].strip().upper()
                 uom_mapping = {
@@ -440,9 +558,11 @@ def post_process_csv(raw_csv):
                     'COUNT': 'CT', 'EACH': 'EA', 'GALLON': 'GAL', 'LITER': 'L'
                 }
                 cols[6] = uom_mapping.get(uom, uom)
-        
+
+        # Append the cleaned, 8-column row to our list
         cleaned_lines.append(','.join(cols[:8]))
     
+    # Join all processed lines back into a single CSV string
     return '\n'.join(cleaned_lines)
 
 # ======================= Chunking for Large Documents =======================
