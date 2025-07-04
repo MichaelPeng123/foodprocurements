@@ -10,10 +10,9 @@ The Food Price Procurement Project aims to assist clients in minimizing their fo
 2. Open terminals for backend and frontend
 3. run `cd frontend`
 4. run `cd backend` in the second terminal and run `.\venv\Scripts\activate.ps1`
-5. Run `python app.py` for backend
+5. Run `python main.py` for backend
 6. Run `npm start` for frontend
-7. go to `localhost:3000` in browser
-8. check backend terminal for logs
+7. If you are facing adminstrator/permission issues: run `PERMANENT: Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` or `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in the terminal
 
 ## Features
 
