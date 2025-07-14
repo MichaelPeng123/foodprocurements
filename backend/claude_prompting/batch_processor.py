@@ -208,8 +208,8 @@ CRITICAL REQUIREMENTS:
 
 2. COLUMN DEFINITIONS (follow precisely and MAKE SURE ALL 8 COLUMNS ARE HERE):
    - Description: Food item name (no quotes, clean text)
-   - Price: Price per unit of quantity purchased (numeric, 1 decimal place)
-   - Quantity: Number of units purchased (whole number)
+   - Price: Price per unit of quantity purchased (numeric, 2 decimal places), sometimes this is referred to as commodity case price in raw data
+   - Quantity: Number of units purchased (whole number), sometimes this is referred to as the (estimated) usage in raw data
    - Pack Size: Original pack size text (e.g., "12/16OZ", "6/2LB")
    - Pack: First number from Pack Size (whole number, e.g., 12 from "12/16OZ")
    - Size: Second number from Pack Size (whole number, e.g., 16 from "12/16OZ")
